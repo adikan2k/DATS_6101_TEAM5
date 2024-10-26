@@ -27,47 +27,65 @@ options(scientific=T, digits = 3)
 ```
 
 # ***Dead Ends and Data Trends: A Journey Through America's Recent Accident Stats***
-# An insightful journey into understanding the patterns behind road fatalities in the U.S. 
-# and creating actionable insights for a safer future.
 
-# Project Overview
-# Motor vehicle accidents are a leading cause of unintentional injury-related deaths in the U.S. 
-# Using the 2022 FARS dataset, our analysis focuses on revealing trends and risk factors that contribute to fatal crashes.
+### An insightful journey into understanding the patterns behind road fatalities in the U.S. and creating actionable insights for a safer future.
+
+
+# ***Project Overview***
+
+### Motor vehicle accidents are a leading cause of unintentional injury-related deaths in the U.S.  Using the 2022 FARS dataset, our analysis focuses on revealing trends and risk factors that contribute to fatal crashes.
+
+
+### Our first step is getting ready by loading the necessary packages and the data. 
+
 
 ```{r, include=T, results='markup',message=TRUE}
 # Loading the necessary libraries
+library(readr)
 library(dplyr)
 library(tidyr)
 library(stringr)
 
 # Loading the dataset
-dataset <- read.csv("dataset.csv")
+dataset <- read_csv("dataset.csv")
 
 # Now viewing the structure of the dataset
 str(dataset)
 summary(dataset)
 ```
 
-# Now, we check for duplicate rows. Let's clear them out!
+
+## Next, we check for duplicate rows. Let's clear them out!
 ```{r, include=T, results='markup',message=TRUE}
 dataset <- dataset %>% distinct()
 ```
 
-```{r, include=T, results='markup',message=TRUE}
 
-library(dplyr)
-dataset <- dataset %>% select(-x, -y, -STATE, -CITY, -COUNTY, -MONTH, -DAYNAME, -DAY_WEEK, -MINUTENAME, -TWAY_ID2, -ROUTE, -RUR_URB, -FUNC_SYS, -RD_OWNER, -NHS, -SP_JUR, -LATITUDENAME, -LONGITUDNAME, -MILEPT, -HARM_EV, -MAN_COLL, -MILEPTNAME, -RELJCT1, -RELJCT2, -TYP_INT, -REL_ROAD, -WRK_ZONE, -LGT_COND, -WEATHER, -SCH_BUS, -RAIL, -NOT_MIN, -ARR_MINNAME, -ARR_HOUR, -HOSP_MN, -SCH_BUSNAME, -RAILNAME, -PERNOTMVIT, -VE_FORMS, -PERSONS)
-colnames(dataset)
-
-# Lets rename columns for consistency
+## Moving on to handling missing values...
 ```{r, include=T, results='markup',message=TRUE}
-names(dataset) <- str_to_lower(names(dataset))
-names(dataset) <- str_replace_all(names(dataset), " ", "_")
+missing_values <- colSums(is.na(dataset))
+print(missing_values[missing_values > 0])
 ```
 
-# Saving the new cleaned dataset
+
+## There are way too many NA values in "TWAY_ID2", "X" AND "Y". Let's drop those columns. *We are dropping a lot many other columns as they are not needed.*
+
 ```{r, include=T, results='markup',message=TRUE}
-write.csv(dataset, "NEW_dataset.csv", row.names = FALSE)
+dataset <- dataset %>% select(-x, -y, -STATE, -CITY, -COUNTY, -MONTH, -DAYNAME, -DAY_WEEK, -MINUTENAME, -TWAY_ID2, -ROUTE, -RUR_URB, -FUNC_SYS, -RD_OWNER, -NHS, -SP_JUR, -LATITUDENAME, -LONGITUDNAME, -MILEPT, -HARM_EV, -MAN_COLL, -MILEPTNAME, -RELJCT1, -RELJCT2, -TYP_INT, -REL_ROAD, -WRK_ZONE, -LGT_COND, -WEATHER, -SCH_BUS, -RAIL, -NOT_MIN, -ARR_MINNAME, -ARR_HOUR, -HOSP_MN, -SCH_BUSNAME, -RAILNAME, -PERNOTMVIT, -VE_FORMS, -PERSONS)
+
+# Showing the remaining features.
+
+# Lets rename columns for consistency
+colnames(dataset)<- str_to_lower(colnames(dataset))
+colnames(dataset) <- str_replace_all(colnames(dataset), " ", "_")
+colnames(dataset)
+```
+
+
+## Saving the new and cleaned dataset...
+
+```{r, include=T, results='markup',message=TRUE}
+write.csv(dataset, "cleaned_dataset.csv", row.names = FALSE)
 ```
 
 
