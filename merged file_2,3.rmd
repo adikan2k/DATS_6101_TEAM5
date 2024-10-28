@@ -1,0 +1,749 @@
+---
+title: "Dead_Ends"
+author: "Team5"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+runtime: shiny
+---
+
+```{r init, include=FALSE}
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+library(ezids)
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+# ***Dead Ends and Data Trends: A Journey Through America's Recent Accident Stats***
+
+### An insightful journey into understanding the patterns behind road fatalities in the U.S. and creating actionable insights for a safer future.
+
+
+# ***Project Overview***
+
+### Motor vehicle accidents are a leading cause of unintentional injury-related deaths in the U.S.  Using the 2022 FARS dataset, our analysis focuses on revealing trends and risk factors that contribute to fatal crashes.
+
+
+### Our first step is getting ready by loading the necessary packages and the data. 
+
+
+```{r, include=T, results='asis',message=TRUE}
+# Loading the necessary libraries
+library(readr)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(ggplot2)
+library(plotly)
+```
+
+
+```{r, include=T, results='markup',message=TRUE}
+# Loading the dataset
+dataset <- read_csv("dataset.csv")
+
+# Now viewing the structure of the dataset
+str(dataset)
+summary(dataset)
+```
+
+
+## Next, we check for duplicate rows. Let's clear them out!
+```{r, include=T, results='markup',message=TRUE}
+dataset <- dataset %>% distinct()
+```
+
+
+## Moving on to handling missing values...
+```{r, include=T, results='markup',message=TRUE}
+missing_values <- colSums(is.na(dataset))
+print(missing_values[missing_values > 0])
+```
+
+
+## There are way too many NA values in "TWAY_ID2", "X" AND "Y". Let's drop those columns. *We are dropping a lot many other columns as they are not needed.*
+
+```{r, include=T, results='markup',message=TRUE}
+dataset <- dataset %>% select(-x, -y, -STATE, -CITY, -COUNTY, -MONTH, -DAYNAME, -DAY_WEEK, -MINUTENAME, -TWAY_ID2, -ROUTE, -RUR_URB, -FUNC_SYS, -RD_OWNER, -NHS, -SP_JUR, -LATITUDENAME, -LONGITUDNAME, -MILEPT, -HARM_EV, -MAN_COLL, -MILEPTNAME, -RELJCT1, -RELJCT2, -TYP_INT, -REL_ROAD, -WRK_ZONE, -LGT_COND, -WEATHER, -SCH_BUS, -RAIL, -NOT_MIN, -ARR_MINNAME, -ARR_HOUR, -HOSP_MN, -SCH_BUSNAME, -RAILNAME, -PERNOTMVIT, -VE_FORMS, -PERSONS)
+
+# Showing the remaining features.
+
+# Lets rename columns for consistency
+colnames(dataset)<- str_to_lower(colnames(dataset))
+colnames(dataset) <- str_replace_all(colnames(dataset), " ", "_")
+colnames(dataset)
+```
+
+
+## Saving the new and cleaned dataset...
+
+#```{r, include=T, results='markup',message=TRUE}
+#write.csv(dataset, "cleaned_dataset.csv", row.names = FALSE)
+#```
+
+```{r, include=T, results='markup',message=TRUE}
+road_data <- dataset %>% 
+  select(rur_urbname) %>%
+  drop_na() %>%
+  filter(!rur_urbname %in% c("Unknown", "Not Reported", "Trafficway Not in State Inventory")) %>%
+  mutate(
+    rur_urbname = factor(rur_urbname, labels = c("Rural", "Urban")),
+  )
+```
+
+## Let's summarize the data to calculate the total fatalities by state.
+
+```{r, include=T, results='markup',message=TRUE}
+state_county_summary <- dataset %>%
+  group_by(statename, countyname) %>%
+  summarise(Total_Fatalities = sum(fatals)) %>%
+  ungroup()
+
+state_summary <- state_county_summary %>%
+  group_by(statename) %>%
+  summarise(Total_Fatalities = sum(Total_Fatalities)) %>%
+  arrange(desc(Total_Fatalities))
+
+```
+
+```{r, include=T, results='markup',message=TRUE}
+
+library(shiny)
+ui <- fluidPage(
+  titlePanel("Drill-Down Analysis of Crash Fatalities by State and County"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("state_select", "Select a State:", choices = unique(state_summary$statename), selected = "Texas")
+    ),
+    
+    mainPanel(
+      tabsetPanel(
+        tabPanel("State-Level Analysis", plotlyOutput("statePlot")),  # State-level plot tab
+        tabPanel("County-Level Analysis", plotlyOutput("countyPlot")) # County-level plot tab
+      )
+    )
+  )
+)
+
+# Define server logic for the Shiny app
+server <- function(input, output) {
+  
+  # State-level Plot for Top 10 States by Total Fatalities
+  output$statePlot <- renderPlotly({
+    top_state_summary <- state_summary %>%
+      slice_head(n = 10)  # Select top 10 states by total fatalities
+    
+    state_bar_plot <- ggplot(top_state_summary, aes(x = reorder(statename, Total_Fatalities), y = Total_Fatalities, fill = Total_Fatalities)) +
+      geom_bar(stat = "identity", color = "black", width = 0.7) +
+      geom_text(aes(label = Total_Fatalities), hjust = -0.2, color = "black", size = 4) +
+      labs(title = "Top 10 States by Total Fatalities",
+           x = "State",
+           y = "Total Number of Fatalities") +
+      theme_minimal() +
+      scale_fill_gradient(low = "lightblue", high = "darkred") +
+      theme(
+        plot.title = element_text(hjust = 0.5, size = 16),
+        legend.position = "none"
+      ) +
+      coord_flip()  # Horizontal bar plot
+    
+    ggplotly(state_bar_plot, tooltip = c("x", "y"))
+  })
+  
+  # County-level Plot for Selected State
+  output$countyPlot <- renderPlotly({
+    # Filter county-level data for the selected state
+    county_data <- state_county_summary %>%
+      filter(statename == input$state_select) %>%
+      arrange(desc(Total_Fatalities)) %>%
+      slice_head(n = 10)  # Select top 10 counties by fatalities within the selected state
+    
+    county_bar_plot <- ggplot(county_data, aes(x = reorder(countyname, Total_Fatalities), y = Total_Fatalities, fill = Total_Fatalities)) +
+      geom_bar(stat = "identity", color = "black", width = 0.7) +
+      geom_text(aes(label = Total_Fatalities), hjust = -0.2, color = "black", size = 4) +
+      labs(title = paste("Top 10 Counties by Total Fatalities in", input$state_select),
+           x = "County",
+           y = "Total Number of Fatalities") +
+      theme_minimal() +
+      scale_fill_gradient(low = "lightyellow", high = "darkorange") +
+      theme(
+        plot.title = element_text(hjust = 0.5, size = 16),
+        legend.position = "none"
+      ) +
+      coord_flip()  # Horizontal bar plot for counties
+    
+    ggplotly(county_bar_plot, tooltip = c("x", "y"))
+  })
+}
+
+# Run the Shiny app
+shinyApp(ui = ui, server = server)
+
+```
+
+
+
+
+
+## **3. What is the relationship between weather and lighting conditions on the occurrence of fatal accidents?**
+
+## 3.1 **Bivariate Analysis**
+
+```{r, include=T, results='markup',message=TRUE}
+
+# Define UI for the Shiny app
+ui <- fluidPage(
+  titlePanel("Fatalities by Weather and Lighting Conditions"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      helpText("Explore fatalities by weather and lighting conditions"),
+      hr()
+    ),
+    
+    mainPanel(
+      tabsetPanel(
+        tabPanel("Weather Conditions", plotlyOutput("weatherPlot")),
+        tabPanel("Lighting Conditions", plotlyOutput("lightingPlot"))
+      )
+    )
+  )
+)
+
+# Define server logic for Shiny app
+server <- function(input, output) {
+  
+  # Filter and aggregate data for weather conditions
+  weather_data <- reactive({
+    dataset %>%
+      filter(weathername != "Not Reported" & weathername != "Reported as Unknown") %>%
+      group_by(weathername) %>%
+      summarise(Total_Fatalities = sum(fatals, na.rm = TRUE)) %>%
+      arrange(desc(Total_Fatalities))
+  })
+  
+  # Filter and aggregate data for lighting conditions
+  lighting_data <- reactive({
+    dataset %>%
+      filter(lgt_condname != "Not Reported" & lgt_condname != "Reported as Unknown") %>%
+      group_by(lgt_condname) %>%
+      summarise(Total_Fatalities = sum(fatals, na.rm = TRUE)) %>%
+      arrange(desc(Total_Fatalities))
+  })
+  
+  # Plot for Weather Conditions with Log Scale and Original Value Labels
+  output$weatherPlot <- renderPlotly({
+    weather_plot <- ggplot(weather_data(), aes(x = reorder(weathername, Total_Fatalities), y = Total_Fatalities)) +
+      geom_bar(stat = "identity", fill = "skyblue") +
+      coord_flip() +
+      scale_y_log10() +  # Apply logarithmic scale to y-axis
+      labs(title = "Fatalities by Weather Conditions", x = "Weather Condition", y = "Total Fatalities (Log Scale)") +
+      theme_minimal() +
+      theme(plot.title = element_text(hjust = 0.5)) +
+      geom_text(aes(label = scales::comma(Total_Fatalities)),  # Display original values on bars
+                hjust = -0.2, size = 3, color = "black")  # Adjust positioning for readability
+    
+    ggplotly(weather_plot, tooltip = c("x", "y"))
+  })
+  
+  # Plot for Lighting Conditions with Log Scale and Original Value Labels
+  output$lightingPlot <- renderPlotly({
+    lighting_plot <- ggplot(lighting_data(), aes(x = reorder(lgt_condname, Total_Fatalities), y = Total_Fatalities)) +
+      geom_bar(stat = "identity", fill = "orange") +
+      coord_flip() +
+      scale_y_log10() +  # Apply logarithmic scale to y-axis
+      labs(title = "Fatalities by Lighting Conditions", x = "Lighting Condition", y = "Total Fatalities (Log Scale)") +
+      theme_minimal() +
+      theme(plot.title = element_text(hjust = 0.5)) +
+      geom_text(aes(label = scales::comma(Total_Fatalities)),  # Display original values on bars
+                hjust = -0.2, size = 3, color = "black")  # Adjust positioning for readability
+    
+    ggplotly(lighting_plot, tooltip = c("x", "y"))
+  })
+}
+
+# Run the Shiny app
+shinyApp(ui = ui, server = server)
+
+## Filtering out the records that is unknown or not reported
+dataset <- dataset %>%
+  filter(!(weathername %in% c("Not Reported", "Reported as Unknown")))
+
+dataset <- dataset %>%
+  filter(!(lgt_condname %in% c("Not Reported", "Reported as Unknown")))
+```
+
+#### Clear weather has the highest number of fatalities, likely due to high exposure as most driving happens in clear conditions.
+
+#### Cloudy and Rain also pose significant risks, while severe conditions like Snow, Fog, and Crosswinds still contribute to fatalities, albeit at lower rates.
+
+#### This insight helps emphasize that while severe weather conditions contribute to road fatalities, most incidents occur during clear weather, likely due to the high volume of travel under these conditions.
+
+## 3.2 **Multivariate analysis** : Let's analyze fatality counts by both weather and lighting conditions using a heatmap
+
+```{r, include=T, results='markup',message=TRUE}
+# Aggregating fatal counts by weather and lighting
+weather_light <- dataset %>%
+  group_by(weathername, lgt_condname) %>%
+  summarize(total_fatals = sum(fatals, na.rm = TRUE))
+
+# Interactive Heatmap
+heatmap_plot <- plot_ly(weather_light, x = ~weathername, y = ~lgt_condname, z = ~total_fatals, type = "heatmap") %>%
+  layout(title = "Fatality Count by Weather and Lighting Condition",
+         xaxis = list(title = "Weather Condition"),
+         yaxis = list(title = "Lighting Condition"))
+
+heatmap_plot
+```
+
+#### **Clear and Daylight Conditions**: These conditions have the highest fatality counts, likely due to the higher volume of traffic under these conditions.
+
+#### **Clear and Dark - Not Lighted**: The relatively high fatality count here suggests the need for improved street lighting on roads frequently used at night.
+
+#### **Weather Impact**: Rain and Cloudy conditions contribute to fatalities across various lighting conditions, pointing to the increased risk associated with low-visibility and wet surfaces.
+
+
+### ***This heatmap can help guide targeted safety measures:***
+
+#### **Enhanced Lighting**: Roads that are dark and not lighted could benefit from additional lighting to reduce nighttime crashes, especially under clear conditions.
+
+#### **Weather-Specific Warnings**: Increased signage or public warnings during rainy or cloudy weather may help drivers exercise caution, particularly in low-light conditions.
+
+
+## **3.3 Location-Based Analysis**
+
+### **Top 10 States by Fatal Accidents in Adverse Weather or Poor Lighting**
+```{r, include=T, results='markup',message=TRUE}
+state_analysis <- dataset %>%
+  filter(weathername %in% c("Rain", "Sleet or Hail", "Blowing Snow","Blowing Sand,Soil Dirt","Severe Crosswinds","Fog,Smog,Smoke","Freezing Rain or Drizzle","Snow"), lgt_condname %in% c("Dark-Not Lighted", "Dark - Lighted","Dark- Unknown Lighting")) %>%
+  group_by(statename) %>%
+  summarise(Total_Fatalities = sum(fatals, na.rm = TRUE)) %>%
+  arrange(desc(Total_Fatalities))
+
+
+# Select the top 10 states with the highest fatalities
+top_adverse_states <- head(state_analysis, 10)  # Top 10 states
+
+ggplot(top_adverse_states, aes(x = reorder(statename, Total_Fatalities), y = Total_Fatalities, fill = Total_Fatalities)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_fill_gradient(low = "blue", high = "red") +
+  labs(title = "Top 10 States by Fatal Accidents in Adverse Weather or Poor Lighting",
+       x = "State", y = "Total Fatalities") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 10),  # Increase font size for readability
+        legend.position = "none")  # Hide the legend
+```
+
+#### This chart shows the top 10 U.S. states with the highest number of fatal accidents occurring under adverse weather or poor lighting conditions. The states are ordered by the total number of fatalities, with Florida and Texas experiencing the highest counts. 
+
+#### **Future Implications:** This analysis helps identify locations that could benefit from targeted safety measures in adverse weather or poor lighting, such as improved lighting infrastructure, better signage, or increased public awareness campaigns during severe weather events.
+
+### **Top 10 States by Fatal Accidents in Clear Weather and Good lighting**
+
+```{r, include=T, results='markup',message=TRUE}
+state_analysis <- dataset %>%
+  filter(weathername %in% c("Clear","Cloudy"), lgt_condname %in% c("Daylight", "Dawn","Dusk")) %>%
+  group_by(statename) %>%
+  summarise(Total_Fatalities = sum(fatals, na.rm = TRUE)) %>%
+  arrange(desc(Total_Fatalities))
+
+
+# Select the top 10 states with the highest fatalities
+top_states <- head(state_analysis, 10)  # Top 10 states
+
+ggplot(top_states, aes(x = reorder(statename, Total_Fatalities), y = Total_Fatalities, fill = Total_Fatalities)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_fill_gradient(low = "blue", high = "red") +
+  labs(title = "States with highest Fatal Accidents in clear weather and good lighting",
+       x = "State", y = "Total Fatalities") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 10),  # Increase font size for readability
+        legend.position = "none")  # Hide the legend
+```
+
+#### Despite favorable weather and lighting conditions, fatalities remain high in clear weather in states like California, Texas, and Florida. This suggests that driver behavior, traffic congestion, and infrastructure quality could be key factors influencing accident rates in these states.
+
+#### However, Focused interventions, such as better road lighting, clear weather warnings, and infrastructure improvements to handle severe weather, could benefit states like Florida, Texas, and New York.
+
+
+## **3.4 Statistical Tests**
+#### Let us support the above results by performing statistical tests:
+
+#### **ANOVA (Analysis of Variance) test** followed by a Tukey's HSD  post hoc test to analyze the impact of lighting conditions (lgt_condname) on the fatal accident counts (fatals) 
+
+```{r, include=T, results='markup',message=TRUE}
+
+anova_lighting <- aov(fatals ~ lgt_condname, data = dataset)
+
+# Display ANOVA summary
+summary(anova_lighting)
+```
+
+#### Let us define our null and alternate hypothesis
+
+#### **Null Hypothesis (H0)**: There is no difference in the mean number of fatalities across different lighting conditions (i.e., lighting conditions do not affect fatal accident counts).
+
+#### **Alternative Hypothesis (H1)**: There is a difference in the mean number of fatalities across at least one pair of lighting conditions.
+
+
+#### ***p-value:***
+
+#### The p-value for lgt_condname is 0.0054, which is below the common significance level of 0.05.
+
+#### This indicates that we reject the null hypothesis and conclude that there is a statistically significant difference in the mean fatal accident counts across different lighting conditions.
+
+#### ***F-Statistic:***
+
+#### The F-value of 2.72 suggests that the variance between the groups (lighting conditions) is more than what would be expected by chance, reinforcing that lighting conditions do affect fatal accident counts.
+
+#### ***Sum of Squares:***
+
+#### The sum of squares (SS) values indicate the variance within the groups (Residuals) and the variance attributed to the lighting conditions (lgt_condname).
+
+#### The ANOVA results indicate that lighting conditions significantly impact the number of fatal accidents, meaning that certain lighting conditions are associated with different fatality rates.
+
+#### Next Step with **Tukey's HSD Test**: Since the ANOVA indicates a significant effect, the Tukey's HSD test can be used to pinpoint which specific lighting conditions differ from each other in terms of fatal accident counts. 
+
+```{r, include=T, results='markup',message=TRUE}
+tukey_results <- TukeyHSD(anova_lighting, "lgt_condname")
+print(tukey_results)
+
+```
+
+### ***Significant Comparisons:***
+
+#### Only the comparison "Dark - Not Lighted" vs. "Dark - Lighted" has a p-value of 0.001, which is below 0.05. This suggests a statistically significant difference in mean fatalities between "Dark - Not Lighted" and "Dark - Lighted" conditions.
+
+#### The positive diff value (0.02067) indicates that "Dark - Not Lighted" has a higher mean fatality count than "Dark - Lighted".
+
+
+### ***Practical Implications :***
+
+#### "Dark - Not Lighted" vs. "Dark - Lighted": Since there is a statistically significant difference between these two conditions, with "Dark - Not Lighted" associated with higher fatality counts, it may suggest that insufficient lighting in dark conditions contributes to a higher risk of fatal accidents.
+
+#### **Recommendation**: Improving lighting in areas that are "Dark - Not Lighted" may help reduce fatal accidents, as lighting seems to play a crucial role in accident prevention under dark conditions.
+
+#### For other lighting conditions, the lack of significant differences suggests that fatalities do not vary considerably across these conditions. This could imply that lighting in conditions like Dawn, Daylight, and Dusk might be sufficient, and improvements in these areas may not have as strong an impact on reducing fatal accidents.
+
+
+#### **Independent t-test** (assuming the fatality rates in adverse and clear weather conditions are from two separate groups).
+
+```{r, include=T, results='markup',message=TRUE}
+
+# Filter data for adverse and clear weather conditions
+adverse_conditions <- c("Rain", "Sleet or Hail", "Blowing Snow","Blowing Sand,Soil Dirt","Severe Crosswinds","Fog,Smog,Smoke","Freezing Rain or Drizzle","Snow")
+fair_conditions <- c("Clear","Cloudy")
+
+# Summarize fatalities by state for adverse weather conditions
+adverse_weather <- dataset %>%
+  filter(weathername %in% adverse_conditions) %>%
+  group_by(statename) %>%
+  summarise(Adverse_Fatalities = sum(fatals, na.rm = TRUE))
+
+# Summarize fatalities by state for fair weather condition
+fair_weather <- dataset %>%
+  filter(weathername == fair_conditions) %>%
+  group_by(statename) %>%
+  summarise(Clear_Fatalities = sum(fatals, na.rm = TRUE))
+
+# Merge the data for adverse and clear weather fatalities by state
+weather_comparison <- merge(adverse_weather, fair_weather, by = "statename", all = TRUE)
+
+# Replace NA values with 0 (in case a state has no fatalities in one of the conditions)
+weather_comparison[is.na(weather_comparison)] <- 0
+
+# Perform the independent t-test
+t_test_result <- t.test(weather_comparison$Adverse_Fatalities, weather_comparison$Clear_Fatalities, 
+                        alternative = "two.sided", var.equal = FALSE)
+
+print(t_test_result)
+```
+
+#### **p-value**:
+
+#### The p-value is 1e-05, which is extremely low (below the standard significance level of 0.05).
+#### This indicates that we can reject the null hypothesis and conclude that there is a statistically significant difference in fatality rates between adverse weather and clear weather conditions.
+
+#### **t-Statistic**:
+
+#### The t-value of -5 suggests a substantial difference between the two groups. The negative value indicates that the mean fatality rate in adverse weather is lower than that in clear weather.
+
+#### The results hence indicate a significant difference in fatality rates between adverse and clear weather conditions, with higher fatalities observed in clear weather.
+
+#### This outcome could suggest that during clear weather, there may be higher traffic volumes, faster speeds, or other risk factors that increase the likelihood of fatalities, whereas adverse weather might lead drivers to exercise more caution, resulting in fewer fatalities.
+
+#### Hence it is important to underastand that, in addition to weather and lighting conditions, there are several other critical factors like road infrastructure, juction types and driver behaviour which can equally influence the likelihood and severity of accidents. Addressing these factors can provide a more holistic approach to improving road safety and reducing fatalities.
+
+
+## 4. **How do road conditions (urban/rural, road type, and traffic controls) impact the severity of crashes?** 
+
+### Before analyzing this, let's prep the data
+
+```{r, include=T, results='markup',message=TRUE}
+
+road_fatalities <- dataset %>%
+  filter(func_sysname != "Unknown" & func_sysname != "Not Reported" & func_sysname != "Trafficway Not in State Inventory") %>%
+  select(func_sysname, fatals) %>%
+  drop_na() %>%
+  mutate(func_sysname = as.factor(func_sysname))
+
+fatality_summary <- road_fatalities %>%
+  group_by(func_sysname) %>%
+  summarise(
+    Total_Fatalities = sum(fatals),
+    SD_Fatalities = sd(fatals),  # Standard deviation for reference
+    Count = n()
+  )
+
+# Print summary for inspection
+print(fatality_summary)
+
+```
+
+## 4.1 Now analyzing the total fatalities by the road type...
+
+```{r, include=T, results='markup',message=TRUE}
+
+# Sort the summary data by Total Fatalities for better visual clarity
+fatality_summary <- fatality_summary %>%
+  arrange(desc(Total_Fatalities))
+
+# Enhanced bar plot with additional features
+fatality_total_bar_plot <- ggplot(fatality_summary, aes(x = reorder(func_sysname, -Total_Fatalities), y = Total_Fatalities, fill = Total_Fatalities)) +
+  geom_bar(stat = "identity", color = "black", width = 0.7) +
+  geom_text(aes(label = Total_Fatalities), vjust = -0.5, color = "black", size = 3.5) +  # Annotations for exact values
+  labs(title = "Total Fatalities by Road Type",
+       x = "Road Type",
+       y = "Total Number of Fatalities") +
+  theme_minimal() +
+  scale_fill_gradient(low = "lightblue", high = "darkred") +  # Color gradient for emphasis
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  )
+
+fatality_total_bar_plotly <- ggplotly(fatality_total_bar_plot, tooltip = c("x", "y", "Total_Fatalities")) %>%
+  layout(
+    xaxis = list(title = "Road Type"),
+    yaxis = list(title = "Total Number of Fatalities"),
+    width = 900,  # Adjust width for readability
+    height = 500  # Adjust height for a balanced look
+  )
+
+fatality_total_bar_plotly
+```
+
+
+### 4.2 **Since we're now dealing with total counts rather than averages, a chi-square test can be more suitable than an ANOVA to determine if there are statistically significant differences in the distribution of fatalities across road types.**
+
+
+```{r, include=T, results='markup',message=TRUE}
+
+fatality_table <- table(road_fatalities$func_sysname, road_fatalities$fatals > 0)
+
+chi_square_result <- chisq.test(fatality_table)
+print(chi_square_result)
+
+```
+
+## Understanding the results...
+
+#### A large chi-square value, like 36993, indicates a large deviation from this "no-difference" scenario, suggesting that some road types are clearly associated with more fatalities than others.
+
+#### p-value < 2e-16 - A p-value less than 0.05 is typically considered statistically significant, meaning the observed differences are unlikely to be due to random chance. Here, the p-value is much smaller (effectively zero), meaning the differences we're seeing are almost certainly real and not due to random chance.
+
+## What are some of the practical implications?
+
+#### Practical Implications
+
+#### **High-Risk Road Types:**
+
+#### Since fatalities are not randomly distributed, certain road types are inherently riskier. This could mean that these roads need extra safety measures.For example, if highways and major arterials show higher fatalities, these road types might benefit from stricter speed controls, increased patrolling, and improved road signage.
+
+#### **Data-Driven Intervention:**
+
+#### The statistical significance (p-value < 2e-16) gives us confidence that investing in safety improvements on high-fatality road types is likely to make a measurable impact on reducing fatalities. This helps decision-makers focus resources where they are most needed rather than spreading resources equally across all road types.
+
+#### **Targeted Policies:**
+
+#### With evidence that fatalities cluster on certain road types, policies could be customized. For example, highways might benefit from median barriers and crash cushions, while local roads might benefit from better lighting and pedestrian crossings.
+
+
+## 4.3 **Now, let's identify the top fatal routes by routename and functional system name.**
+
+```{r, include=T, results='markup',message=TRUE}
+
+route_function_summary <- dataset %>%
+  group_by(routename, func_sysname) %>%
+  summarise(fatals = n()) %>%
+  arrange(desc(fatals)) %>%
+  ungroup()
+
+# Filter the top 10 high-frequency routes and functional systems
+top_route_function_summary <- route_function_summary %>%
+  slice_head(n = 10)
+
+```
+
+```{r, include=T, results='markup',message=TRUE}
+crash_freq_plot <- ggplot(top_route_function_summary, aes(x = reorder(routename, fatals), y = fatals, fill = func_sysname)) +
+  geom_bar(stat = "identity", color = "black", width = 0.7) +
+  labs(title = "Top Routes and Functional Systems by Crash Frequency",
+       x = "Route Name",
+       y = "Fatals") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Paired") +  # Colorful palette for road types
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16),
+    legend.title = element_text(size = 10),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  coord_flip()  # Flip for better readability
+
+
+crash_freq_plotly <- ggplotly(crash_freq_plot, tooltip = c("x", "y", "fill"))
+
+crash_freq_plotly
+```
+
+```{r, include=T, results='markup',message=TRUE}
+crash_freq_heatmap <- ggplot(top_route_function_summary, aes(x = func_sysname, y = reorder(routename, fatals), fill = fatals)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "lightblue", high = "darkred", name = "Crash Count") +
+  labs(title = "Crash Frequency Heatmap by Route and Functional System",
+       x = "Functional System",
+       y = "Route Name") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text.y = element_text(size = 10)
+  )
+
+crash_freq_heatmap_plotly <- ggplotly(crash_freq_heatmap, tooltip = c("x", "y", "fill"))
+
+crash_freq_heatmap_plotly
+```
+
+## **Insights**
+
+#### **High Traffic Volume Routes are High-Risk**: Routes like State Highway, US Highway, and Interstate show high crash frequencies, likely due to high traffic volume and higher speeds. This suggests that major highways and state routes may need targeted safety interventions to manage these risks effectively.
+
+#### **Diverse Functional Systems on Certain Routes**: The presence of multiple functional systems (e.g., Principal Arterial and Minor Arterial) on State Highways and Local Streets indicates that these roads experience varied traffic conditions, which could contribute to higher crash risks.
+
+## **Potential for Safety Interventions**:
+
+#### State and US Highways could benefit from interventions such as speed control measures, improved signage, and roadway design enhancements. Local streets and county roads, while having fewer crashes overall, may still need safety measures, especially in urban areas with pedestrian traffic.
+
+
+## 4.4 **Do fatalities and frequency differ significantly between urban and rural functional systems?**
+
+```{r, include=T, results='markup',message=TRUE}
+
+# Summarize crash severity and frequency by functional system and urban/rural classification
+summary_data <- dataset %>%
+  filter(rur_urbname != "Unknown" & rur_urbname != "Not Reported" & rur_urbname != "Trafficway Not in State Inventory") %>%
+  group_by(rur_urbname, func_sysname) %>%
+  summarise(
+    Avg_Severity = mean(fatals, na.rm = TRUE),
+    Crash_Frequency = n()
+  ) %>%
+  ungroup()
+
+ui <- fluidPage(
+  titlePanel("Comparing Crash Characteristics on Urban vs. Rural Functional Systems"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("system_select", "Select Functional System:", choices = unique(summary_data$func_sysname)),
+      hr(),
+      helpText("Select a functional system to compare crash severity and frequency in urban vs. rural areas.")
+    ),
+    
+    mainPanel(
+      tabsetPanel(
+        tabPanel("Crash Severity", plotlyOutput("severityPlot")),
+        tabPanel("Crash Frequency", plotlyOutput("frequencyPlot")),
+        tabPanel("Statistical Test Results", verbatimTextOutput("testResults"))
+      )
+    )
+  )
+)
+
+server <- function(input, output){
+  
+  # Filter data based on selected functional system
+  filtered_data <- reactive({
+    summary_data %>%
+      filter(func_sysname == input$system_select)
+  })
+  
+  # Plot: Average Crash Severity in Urban vs. Rural Areas
+  output$severityPlot <- renderPlotly({
+    severity_plot <- ggplot(filtered_data(), aes(x = rur_urbname, y = Avg_Severity, fill = rur_urbname)) +
+      geom_bar(stat = "identity", position = "dodge", color = "black") +
+      labs(title = paste("Average Crash Severity in", input$system_select),
+           x = "Area Type (Urban/Rural)",
+           y = "Average Crash Severity") +
+      scale_fill_manual(values = c("Urban" = "skyblue", "Rural" = "salmon")) +
+      theme_minimal() +
+      theme(plot.title = element_text(hjust = 0.5))
+    
+    ggplotly(severity_plot, tooltip = c("x", "y"))
+  })
+  
+  # Plot: Crash Frequency in Urban vs. Rural Areas
+  output$frequencyPlot <- renderPlotly({
+    frequency_plot <- ggplot(filtered_data(), aes(x = rur_urbname, y = Crash_Frequency, fill = rur_urbname)) +
+      geom_bar(stat = "identity", position = "dodge", color = "black") +
+      labs(title = paste("Crash Frequency in", input$system_select),
+           x = "Area Type (Urban/Rural)",
+           y = "Crash Frequency") +
+      scale_fill_manual(values = c("Urban" = "lightgreen", "Rural" = "darkorange")) +
+      theme_minimal() +
+      theme(plot.title = element_text(hjust = 0.5))
+    
+    ggplotly(frequency_plot, tooltip = c("x", "y"))
+  })
+
+# Perform t-tests to compare severity and frequency between Urban and Rural areas
+  output$testResults <- renderPrint({
+    data <- filtered_data()
+    
+    # Check if we have enough data for t-tests
+    if (nrow(data) >= 2) {
+      severity_ttest <- t.test(Avg_Severity ~ rur_urbname, data = data)
+      frequency_ttest <- t.test(Crash_Frequency ~ rur_urbname, data = data)
+      
+      cat("T-Test Results for Crash Severity:\n")
+      print(severity_ttest)
+      cat("\n\n")
+      
+      cat("T-Test Results for Crash Frequency:\n")
+      print(frequency_ttest)
+    } else {
+      cat("Not enough data for t-tests.")
+    }
+  })
+}
+
+shinyApp(ui = ui, server = server)
+```
