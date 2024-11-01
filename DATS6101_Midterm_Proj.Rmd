@@ -190,6 +190,7 @@ road_data <- dataset %>%
 
 
 ## Data Subsetting and Preparation
+
 Subset for temporal question
 ```{r Q1:Create Temporal Subset}
 # Select columns consists of temporal factors (month, day, day_week, hour) and no of fatalities (fatals)
@@ -324,7 +325,7 @@ df_wday_accidents <- df_wday_accidents %>%
 df_temporal %>% ggplot(aes(x= day_weekname, fill = day_type)) +
   geom_bar()+
   labs(x = "Day of the Week", y = "Number of Fatal Accidents", 
-       title = "Frequency of Fatal Accidents by Day of the Week",
+       title = "Count of Fatal Accidents by Day of the Week",
        fill = "Day of Week") +  
   scale_fill_manual(values = c("#bfbfbf", "#0072B2"), 
                     labels = c("weekend", "weekday")) +
@@ -533,13 +534,11 @@ df_daily %>% ggplot(aes(x = day_weekname, y = total_fatals, fill = day_type))+
        y = "Daily Fatalities", 
        title = "Daily Fatalities by Day of the Week")+
   scale_fill_manual(values = c("#bfbfbf","#0072B2"))
-
-
 ```
 
 The boxplot shows that daily fatalities are generally higher on weekends. This suggests that weekends tend to have a higher count of fatalities, potentially due to increased travel.
 
-## 2.3.2 Summary Statistics of Day of Week
+### 2.3.2 Summary Statistics of Day of Week
 ```{r avg daily fatalities by day of week}
  df_summary_day_week <- df_daily %>% 
   group_by(day_weekname) %>% 
