@@ -77,7 +77,7 @@ print(missing_values[missing_values > 0])
 ## There are way too many NA values in "TWAY_ID2", "X" AND "Y". Let's drop those columns. *We are dropping a lot many other columns as they are not needed.*
 
 ```{r, include=T, results='markup',message=TRUE}
-dataset <- dataset %>% select(-x, -y, -STATE, -CITY, -COUNTY, -MONTH, -DAYNAME, -DAY_WEEK, -MINUTENAME, -TWAY_ID2, -ROUTE, -RUR_URB, -FUNC_SYS, -RD_OWNER, -NHS, -SP_JUR, -LATITUDENAME, -LONGITUDNAME, -MILEPT, -HARM_EV, -MAN_COLL, -MILEPTNAME, -RELJCT1, -RELJCT2, -TYP_INT, -REL_ROAD, -WRK_ZONE, -LGT_COND, -WEATHER, -SCH_BUS, -RAIL, -NOT_MIN, -ARR_MINNAME, -ARR_HOUR, -HOSP_MN, -SCH_BUSNAME, -RAILNAME, -PERNOTMVIT, -VE_FORMS, -PERSONS, -HOURNAME, -TWAY_ID, -RD_OWNERNAME, -NHSNAME, -SP_JURNAME, -HARM_EVNAME, -RELJCT1NAME, -RELJCT2NAME, -TYP_INTNAME, -REL_ROADNAME, -WRK_ZONENAME)
+dataset <- dataset %>% select(-x, -y, -STATE, -CITY, -COUNTY, -MONTH, -DAYNAME, -DAY_WEEK, -MINUTENAME, -TWAY_ID2, -ROUTE, -RUR_URB, -FUNC_SYS, -RD_OWNER, -NHS, -SP_JUR, -LATITUDENAME, -LONGITUDNAME, -MILEPT, -HARM_EV, -MAN_COLL, -MILEPTNAME, -RELJCT1, -RELJCT2, -TYP_INT, -REL_ROAD, -WRK_ZONE, -LGT_COND, -WEATHER, -SCH_BUS, -RAIL, -NOT_MIN, -ARR_MINNAME, -ARR_HOUR, -HOSP_MN, -SCH_BUSNAME, -RAILNAME, -PERNOTMVIT, -VE_FORMS, -PERSONS -HOURNAME, -TWAY_ID, -RD_OWNDERNAME, -NHSNAME, -SP_JURNAME, -RELJCT2NAME, -RELJCT1NAME, -TYP_INTNAME, -REL_ROADNAME, -WRK_ZONENAME, -HARM_EVNAME)
 
 # Showing the remaining features.
 
@@ -85,22 +85,7 @@ dataset <- dataset %>% select(-x, -y, -STATE, -CITY, -COUNTY, -MONTH, -DAYNAME, 
 colnames(dataset)<- str_to_lower(colnames(dataset))
 colnames(dataset) <- str_replace_all(colnames(dataset), " ", "_")
 colnames(dataset)
-
-# Converting categorical variables to factors...
-
-dataset <- dataset %>%
-  mutate(
-    day_weekname = as.factor(day_weekname),
-    day = as.factor(day),
-    lgt_condname = as.factor(lgt_condname),
-    rur_urbname = as.factor(rur_urbname),
-    day_weekname = as.factor(day_weekname),
-    countyname = as.factor(countyname),
-    statename = as.factor(statename),
-    func_sysname = as.factor(func_sysname),
-    hour = as.factor(hour)
-  )
-
+print(ncol(dataset))
 ```
 
 
@@ -110,51 +95,17 @@ dataset <- dataset %>%
 #write.csv(dataset, "cleaned_dataset.csv", row.names = FALSE)
 #```
 
-
-## **Outlier detection and removal**
-
 ```{r, include=T, results='markup',message=TRUE}
-
-columns <- c("ve_total", "peds", "permvit", "arr_min", "hosp_hr")
-
-dataset_long <- dataset %>%
-  select(all_of(columns)) %>%  # Select specified columns
-  pivot_longer(cols = everything(), names_to = "variable", values_to = "value")
-
-# Plotting boxplots to visualize outliers
-ggplot(dataset_long, aes(x = variable, y = value)) +
-  geom_boxplot(outlier.color = "red", outlier.shape = 16, outlier.size = 2) +
-  facet_wrap(~ variable, scales = "free") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  labs(title = "Boxplots of Selected Columns to Identify Outliers",
-       x = "Variables",
-       y = "Values")
-
-remove_outliers <- function(df, columns) {
-  df %>% mutate(across(all_of(columns), ~ ifelse(
-    . < (quantile(., 0.25, na.rm = TRUE) - 1.5 * IQR(., na.rm = TRUE)) | 
-    . > (quantile(., 0.75, na.rm = TRUE) + 1.5 * IQR(., na.rm = TRUE)), 
-    NA, .))) %>%
-    drop_na()
-}
-dataset <- remove_outliers(dataset, columns)
-
-# Reshape data to long format for boxplot visualization after removing outliers
-dataset_long <- dataset %>%
-  select(all_of(columns)) %>%
-  pivot_longer(cols = everything(), names_to = "variable", values_to = "value")
-
-# Plotting boxplots to visualize the cleaned data without outliers
-ggplot(dataset_long, aes(x = variable, y = value)) +
-  geom_boxplot(outlier.color = "red", outlier.shape = 16, outlier.size = 2) +
-  facet_wrap(~ variable, scales = "free") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  labs(title = "Boxplots of Selected Columns After Outlier Removal",
-       x = "Variables",
-       y = "Values")
-
+road_data <- dataset %>% 
+  select(rur_urbname) %>%
+  drop_na() %>%
+  filter(!rur_urbname %in% c("Unknown", "Not Reported", "Trafficway Not in State Inventory")) %>%
+  mutate(
+    rur_urbname = factor(rur_urbname, labels = c("Rural", "Urban")),
+  )
 ```
 
+## Let's summarize the data to calculate the total fatalities by state.
 
 ```{r, include=T, results='markup',message=TRUE}
 state_county_summary <- dataset %>%
@@ -168,7 +119,6 @@ state_summary <- state_county_summary %>%
   arrange(desc(Total_Fatalities))
 
 ```
-
 
 ```{r, include=T, results='markup',message=TRUE}
 

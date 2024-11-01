@@ -9,6 +9,7 @@
 .Ruserdata
 .Rproj.user/
 
+*.html
 *.pdf
 *.docx
 *.knit.md

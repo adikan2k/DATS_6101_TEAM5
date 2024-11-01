@@ -1285,7 +1285,7 @@ if (non_missing_count >= 3 && non_missing_count <= 5000) {
 qqnorm(dataset$total_fatalities, main="Q-Q Plot for Total Fatalities")
 qqline(dataset$total_fatalities, col="red")
 ```
-###The Q-Q plot displays the quantiles of the sample data (total fatalities) against the quantiles of a theoretical normal distribution. If the data points closely follow the red line, it indicates that the data is normally distributed.
+### The Q-Q plot displays the quantiles of the sample data (total fatalities) against the quantiles of a theoretical normal distribution. If the data points closely follow the red line, it indicates that the data is normally distributed.
 
 ## Statistical Test
 
@@ -1386,7 +1386,7 @@ print(high_risk_states)
 
 ### This analysis underscores the need for targeted traffic safety interventions, particularly during months identified with high fatality counts.
 
-#Checking if the no.of fatalities have been decreasing or increasing over the months in different regions
+# Checking if the no.of fatalities have been decreasing or increasing over the months in different regions
 
 
 ```{r}
@@ -1425,7 +1425,7 @@ print(trend_direction)
 
 ```{r data-preparation}
 # Calculate EMS arrival time in minutes using only the minute column
-dataset$ems_arrival_time <- as.numeric(dataset$minute)
+dataset$ems_arrival_time <- as.numeric(dataset$arr_min)
 
 # Check if FATALS column exists and convert it to numeric
 if ("fatals" %in% colnames(dataset)) {
@@ -1583,3 +1583,17 @@ if (correlation_severity$p.value < 0.05) {
   cat("- There is no significant relationship between EMS arrival time and the severity of accidents.\n")
 }
 ```
+
+
+## Key Findings:
+#### Fatal accidents are more frequent between 6 pm and 10 pm and on weekends, with late-night hours linked to increased severity
+#### Clear weather conditions see the highest fatalities, while poorly lit roads (“Dark - Not Lighted”) have elevated risks.
+#### Highways and major arterials report the most fatalities, likely influenced by higher speeds and traffic volume.
+#### EMS response time did not significantly affect fatality severity, suggesting a greater need for preventive measures over emergency response.
+
+## Limitation
+#### Solely focus on accident file, excluding critical behavioral aspects like impaired driving or motorist fatigue
+
+## Further considerations: Cross Factor Analysis
+#### To gain more comprehensive understanding, further analysis should integrate these factors, examining the interactive effect on fatal accidents
+#### investigate the underlying explanation for our analysis result
