@@ -12,19 +12,15 @@ output:
   pdf_document:
     toc: yes
     toc_depth: '3'
-runtime: shiny
 ---
 
 ```{r init, include=FALSE}
-# some of common options (and the defaults) are: 
-# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+ 
 library(ezids)
-# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+
 knitr::opts_chunk$set(warning = F, results = "hide", message = F)
 options(scientific=T, digits = 3) 
-# options(scipen=9, digits = 3) 
-# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
-# use scipen=999 to prevent scientific notation at all times
+
 ```
 
 # ***Dead Ends and Data Trends: A Journey Through America's Recent Accident Stats***
@@ -49,7 +45,6 @@ library(plotly)
 library(car)
 library(PMCMRplus)
 library(here)
-library(shiny)
 ```
 
 
@@ -158,8 +153,6 @@ ggplot(dataset_long, aes(x = variable, y = value)) +
 ```
 
 
-
-## Saving the new and cleaned dataset...
 
 #```{r, include=T, results='markup',message=TRUE}
 #write.csv(dataset, "cleaned_dataset.csv", row.names = FALSE)
@@ -595,6 +588,7 @@ p-values <0.05, there is a statistically significant difference (p-value < 0.05)
 **Let's summarize the data to calculate the total fatalities by state.**
 
 ```{r, include=T, results='markup',message=TRUE}
+
 state_county_summary <- dataset %>%
   group_by(statename, countyname) %>%
   summarise(Total_Fatalities = sum(fatals)) %>%
@@ -605,79 +599,52 @@ state_summary <- state_county_summary %>%
   summarise(Total_Fatalities = sum(Total_Fatalities)) %>%
   arrange(desc(Total_Fatalities))
 
-```
+# 1. State-Level Analysis: Plot top 10 states by total fatalities
+top_state_summary <- state_summary %>%
+  slice_head(n = 10)  # Select top 10 states by total fatalities
 
-```{r, include=T, results='markup',message=TRUE}
-ui <- fluidPage(
-  titlePanel("Drill-Down Analysis of Crash Fatalities by State and County"),
-  
-  sidebarLayout(
-    sidebarPanel(
-      selectInput("state_select", "Select a State:", choices = unique(state_summary$statename), selected = "Texas")
-    ),
-    
-    mainPanel(
-      tabsetPanel(
-        tabPanel("State-Level Analysis", plotlyOutput("statePlot")),  # State-level plot tab
-        tabPanel("County-Level Analysis", plotlyOutput("countyPlot")) # County-level plot tab
-      )
-    )
-  )
-)
+state_bar_plot <- ggplot(top_state_summary, aes(x = reorder(statename, Total_Fatalities), y = Total_Fatalities, fill = Total_Fatalities)) +
+  geom_bar(stat = "identity", color = "black", width = 0.7) +
+  geom_text(aes(label = Total_Fatalities), hjust = -0.2, color = "black", size = 4) +
+  labs(title = "Top 10 States by Total Fatalities",
+       x = "State",
+       y = "Total Number of Fatalities") +
+  theme_minimal() +
+  scale_fill_gradient(low = "lightblue", high = "darkred") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16),
+    legend.position = "none"
+  ) +
+  coord_flip()  # Horizontal bar plot
 
-# Define server logic for the Shiny app
-server <- function(input, output) {
-  
-  # State-level Plot for Top 10 States by Total Fatalities
-  output$statePlot <- renderPlotly({
-    top_state_summary <- state_summary %>%
-      slice_head(n = 10)  # Select top 10 states by total fatalities
-    
-    state_bar_plot <- ggplot(top_state_summary, aes(x = reorder(statename, Total_Fatalities), y = Total_Fatalities, fill = Total_Fatalities)) +
-      geom_bar(stat = "identity", color = "black", width = 0.7) +
-      geom_text(aes(label = Total_Fatalities), hjust = -0.2, color = "black", size = 4) +
-      labs(title = "Top 10 States by Total Fatalities",
-           x = "State",
-           y = "Total Number of Fatalities") +
-      theme_minimal() +
-      scale_fill_gradient(low = "lightblue", high = "darkred") +
-      theme(
-        plot.title = element_text(hjust = 0.5, size = 16),
-        legend.position = "none"
-      ) +
-      coord_flip()  # Horizontal bar plot
-    
-    ggplotly(state_bar_plot, tooltip = c("x", "y"))
-  })
-  
-  # County-level Plot for Selected State
-  output$countyPlot <- renderPlotly({
-    # Filter county-level data for the selected state
-    county_data <- state_county_summary %>%
-      filter(statename == input$state_select) %>%
-      arrange(desc(Total_Fatalities)) %>%
-      slice_head(n = 10)  # Select top 10 counties by fatalities within the selected state
-    
-    county_bar_plot <- ggplot(county_data, aes(x = reorder(countyname, Total_Fatalities), y = Total_Fatalities, fill = Total_Fatalities)) +
-      geom_bar(stat = "identity", color = "black", width = 0.7) +
-      geom_text(aes(label = Total_Fatalities), hjust = -0.2, color = "black", size = 4) +
-      labs(title = paste("Top 10 Counties by Total Fatalities in", input$state_select),
-           x = "County",
-           y = "Total Number of Fatalities") +
-      theme_minimal() +
-      scale_fill_gradient(low = "lightyellow", high = "darkorange") +
-      theme(
-        plot.title = element_text(hjust = 0.5, size = 16),
-        legend.position = "none"
-      ) +
-      coord_flip()  # Horizontal bar plot for counties
-    
-    ggplotly(county_bar_plot, tooltip = c("x", "y"))
-  })
-}
 
-# Run the Shiny app
-shinyApp(ui = ui, server = server)
+state_plotly <- ggplotly(state_bar_plot, tooltip = c("x", "y"))
+state_plotly
+
+# 2. County-Level Analysis: Plot top 10 counties by fatalities within a selected state
+selected_state <- "Texas"  
+
+county_data <- state_county_summary %>%
+  filter(statename == selected_state) %>%
+  arrange(desc(Total_Fatalities)) %>%
+  slice_head(n = 10)
+
+county_bar_plot <- ggplot(county_data, aes(x = reorder(countyname, Total_Fatalities), y = Total_Fatalities, fill = Total_Fatalities)) +
+  geom_bar(stat = "identity", color = "black", width = 0.7) +
+  geom_text(aes(label = Total_Fatalities), hjust = -0.2, color = "black", size = 4) +
+  labs(title = paste("Top 10 Counties by Total Fatalities in", selected_state),
+       x = "County",
+       y = "Total Number of Fatalities") +
+  theme_minimal() +
+  scale_fill_gradient(low = "lightyellow", high = "darkorange") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16),
+    legend.position = "none"
+  ) +
+  coord_flip()  
+
+county_plotly <- ggplotly(county_bar_plot, tooltip = c("x", "y"))
+county_plotly
 
 ```
 
@@ -688,87 +655,56 @@ shinyApp(ui = ui, server = server)
 ## 3.1 **Bivariate Analysis**
 
 ```{r, include=T, results='markup',message=TRUE}
+library(dplyr)
+library(ggplot2)
+library(plotly)
+library(scales)
 
-# Define UI for the Shiny app
-ui <- fluidPage(
-  titlePanel("Fatalities by Weather and Lighting Conditions"),
-  
-  sidebarLayout(
-    sidebarPanel(
-      helpText("Explore fatalities by weather and lighting conditions"),
-      hr()
-    ),
-    
-    mainPanel(
-      tabsetPanel(
-        tabPanel("Weather Conditions", plotlyOutput("weatherPlot")),
-        tabPanel("Lighting Conditions", plotlyOutput("lightingPlot"))
-      )
-    )
-  )
-)
-
-# Define server logic for Shiny app
-server <- function(input, output) {
-  
-  # Filter and aggregate data for weather conditions
-  weather_data <- reactive({
-    dataset %>%
-      filter(weathername != "Not Reported" & weathername != "Reported as Unknown") %>%
-      group_by(weathername) %>%
-      summarise(Total_Fatalities = sum(fatals, na.rm = TRUE)) %>%
-      arrange(desc(Total_Fatalities))
-  })
-  
-  # Filter and aggregate data for lighting conditions
-  lighting_data <- reactive({
-    dataset %>%
-      filter(lgt_condname != "Not Reported" & lgt_condname != "Reported as Unknown") %>%
-      group_by(lgt_condname) %>%
-      summarise(Total_Fatalities = sum(fatals, na.rm = TRUE)) %>%
-      arrange(desc(Total_Fatalities))
-  })
-  
-  # Plot for Weather Conditions with Log Scale and Original Value Labels
-  output$weatherPlot <- renderPlotly({
-    weather_plot <- ggplot(weather_data(), aes(x = reorder(weathername, Total_Fatalities), y = Total_Fatalities)) +
-      geom_bar(stat = "identity", fill = "skyblue") +
-      coord_flip() +
-      scale_y_log10() +  # Apply logarithmic scale to y-axis
-      labs(title = "Fatalities by Weather Conditions", x = "Weather Condition", y = "Total Fatalities (Log Scale)") +
-      theme_minimal() +
-      theme(plot.title = element_text(hjust = 0.5)) +
-      geom_text(aes(label = scales::comma(Total_Fatalities)),  # Display original values on bars
-                hjust = -0.2, size = 3, color = "black")  # Adjust positioning for readability
-    
-    ggplotly(weather_plot, tooltip = c("x", "y"))
-  })
-  
-  # Plot for Lighting Conditions with Log Scale and Original Value Labels
-  output$lightingPlot <- renderPlotly({
-    lighting_plot <- ggplot(lighting_data(), aes(x = reorder(lgt_condname, Total_Fatalities), y = Total_Fatalities)) +
-      geom_bar(stat = "identity", fill = "orange") +
-      coord_flip() +
-      scale_y_log10() +  # Apply logarithmic scale to y-axis
-      labs(title = "Fatalities by Lighting Conditions", x = "Lighting Condition", y = "Total Fatalities (Log Scale)") +
-      theme_minimal() +
-      theme(plot.title = element_text(hjust = 0.5)) +
-      geom_text(aes(label = scales::comma(Total_Fatalities)),  # Display original values on bars
-                hjust = -0.2, size = 3, color = "black")  # Adjust positioning for readability
-    
-    ggplotly(lighting_plot, tooltip = c("x", "y"))
-  })
-}
-
-# Run the Shiny app
-shinyApp(ui = ui, server = server)
-
-## Filtering out the records that is unknown or not reported
+# Filtering out unknown or not reported values in the dataset
 dataset <- dataset %>%
-  filter(!(weathername %in% c("Not Reported", "Reported as Unknown")))
-
-dataset <- dataset %>%
+  filter(!(weathername %in% c("Not Reported", "Reported as Unknown"))) %>%
   filter(!(lgt_condname %in% c("Not Reported", "Reported as Unknown")))
+
+# Aggregate data for weather conditions
+weather_data <- dataset %>%
+  group_by(weathername) %>%
+  summarise(Total_Fatalities = sum(fatals, na.rm = TRUE)) %>%
+  arrange(desc(Total_Fatalities))
+
+lighting_data <- dataset %>%
+  group_by(lgt_condname) %>%
+  summarise(Total_Fatalities = sum(fatals, na.rm = TRUE)) %>%
+  arrange(desc(Total_Fatalities))
+
+# 1. Plot for Weather Conditions with Log Scale and Original Value Labels
+weather_plot <- ggplot(weather_data, aes(x = reorder(weathername, Total_Fatalities), y = Total_Fatalities)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  coord_flip() +
+  scale_y_log10() + 
+  labs(title = "Fatalities by Weather Conditions", x = "Weather Condition", y = "Total Fatalities (Log Scale)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  geom_text(aes(label = comma(Total_Fatalities)), 
+            hjust = -0.2, size = 3, color = "black")  
+
+
+weather_plotly <- ggplotly(weather_plot, tooltip = c("x", "y"))
+weather_plotly
+
+# 2. Plot for Lighting Conditions with Log Scale and Original Value Labels
+lighting_plot <- ggplot(lighting_data, aes(x = reorder(lgt_condname, Total_Fatalities), y = Total_Fatalities)) +
+  geom_bar(stat = "identity", fill = "orange") +
+  coord_flip() +
+  scale_y_log10() + 
+  labs(title = "Fatalities by Lighting Conditions", x = "Lighting Condition", y = "Total Fatalities (Log Scale)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  geom_text(aes(label = comma(Total_Fatalities)),  
+            hjust = -0.2, size = 3, color = "black") 
+lighting_plotly <- ggplotly(lighting_plot, tooltip = c("x", "y"))
+
+lighting_plotly
+
 ```
 
 #### Clear weather has the highest number of fatalities, likely due to high exposure as most driving happens in clear conditions.
@@ -820,7 +756,7 @@ state_analysis <- dataset %>%
 
 
 # Select the top 10 states with the highest fatalities
-top_adverse_states <- head(state_analysis, 10)  # Top 10 states
+top_adverse_states <- head(state_analysis, 10)  
 
 ggplot(top_adverse_states, aes(x = reorder(statename, Total_Fatalities), y = Total_Fatalities, fill = Total_Fatalities)) +
   geom_bar(stat = "identity") +
@@ -829,8 +765,8 @@ ggplot(top_adverse_states, aes(x = reorder(statename, Total_Fatalities), y = Tot
   labs(title = "Top 10 States by Fatal Accidents in Adverse Weather or Poor Lighting",
        x = "State", y = "Total Fatalities") +
   theme_minimal() +
-  theme(axis.text.y = element_text(size = 10),  # Increase font size for readability
-        legend.position = "none")  # Hide the legend
+  theme(axis.text.y = element_text(size = 10),  
+        legend.position = "none")  
 ```
 
 #### This chart shows the top 10 U.S. states with the highest number of fatal accidents occurring under adverse weather or poor lighting conditions. The states are ordered by the total number of fatalities, with Florida and Texas experiencing the highest counts. 
@@ -848,7 +784,7 @@ state_analysis <- dataset %>%
 
 
 # Select the top 10 states with the highest fatalities
-top_states <- head(state_analysis, 10)  # Top 10 states
+top_states <- head(state_analysis, 10)  
 
 ggplot(top_states, aes(x = reorder(statename, Total_Fatalities), y = Total_Fatalities, fill = Total_Fatalities)) +
   geom_bar(stat = "identity") +
@@ -857,8 +793,8 @@ ggplot(top_states, aes(x = reorder(statename, Total_Fatalities), y = Total_Fatal
   labs(title = "States with highest Fatal Accidents in clear weather and good lighting",
        x = "State", y = "Total Fatalities") +
   theme_minimal() +
-  theme(axis.text.y = element_text(size = 10),  # Increase font size for readability
-        legend.position = "none")  # Hide the legend
+  theme(axis.text.y = element_text(size = 10), 
+        legend.position = "none")  
 ```
 
 #### Despite favorable weather and lighting conditions, fatalities remain high in clear weather in states like California, Texas, and Florida. This suggests that driver behavior, traffic congestion, and infrastructure quality could be key factors influencing accident rates in these states.
@@ -875,7 +811,6 @@ ggplot(top_states, aes(x = reorder(statename, Total_Fatalities), y = Total_Fatal
 
 anova_lighting <- aov(fatals ~ lgt_condname, data = dataset)
 
-# Display ANOVA summary
 summary(anova_lighting)
 ```
 
@@ -997,7 +932,7 @@ fatality_summary <- road_fatalities %>%
     Count = n()
   )
 
-# Print summary for inspection
+
 print(fatality_summary)
 
 ```
@@ -1013,12 +948,13 @@ fatality_summary <- fatality_summary %>%
 # Enhanced bar plot with additional features
 fatality_total_bar_plot <- ggplot(fatality_summary, aes(x = reorder(func_sysname, -Total_Fatalities), y = Total_Fatalities, fill = Total_Fatalities)) +
   geom_bar(stat = "identity", color = "black", width = 0.7) +
-  geom_text(aes(label = Total_Fatalities), vjust = -0.5, color = "black", size = 3.5) +  # Annotations for exact values
+  geom_text(aes(label = Total_Fatalities), vjust = -0.5, color = "black", size = 3.5) +  
+  
   labs(title = "Total Fatalities by Road Type",
        x = "Road Type",
        y = "Total Number of Fatalities") +
   theme_minimal() +
-  scale_fill_gradient(low = "lightblue", high = "darkred") +  # Color gradient for emphasis
+  scale_fill_gradient(low = "lightblue", high = "darkred") + 
   theme(
     plot.title = element_text(hjust = 0.5, size = 16),
     axis.text.x = element_text(angle = 45, hjust = 1),
@@ -1029,8 +965,8 @@ fatality_total_bar_plotly <- ggplotly(fatality_total_bar_plot, tooltip = c("x", 
   layout(
     xaxis = list(title = "Road Type"),
     yaxis = list(title = "Total Number of Fatalities"),
-    width = 900,  # Adjust width for readability
-    height = 500  # Adjust height for a balanced look
+    width = 900,  
+    height = 500  
   )
 
 fatality_total_bar_plotly
@@ -1093,18 +1029,18 @@ top_route_function_summary <- route_function_summary %>%
 ```{r, include=T, results='markup',message=TRUE}
 crash_freq_plot <- ggplot(top_route_function_summary, aes(x = reorder(routename, fatals), y = fatals, fill = func_sysname)) +
   geom_bar(stat = "identity", color = "black", width = 0.7) +
-  labs(title = "Top Routes and Functional Systems by Crash Frequency",
+  labs(title = "Top Routes and Func Systems by Crash Freq",
        x = "Route Name",
        y = "Fatals") +
   theme_minimal() +
-  scale_fill_brewer(palette = "Paired") +  # Colorful palette for road types
+  scale_fill_brewer(palette = "Paired") + 
   theme(
     plot.title = element_text(hjust = 0.5, size = 16),
     legend.title = element_text(size = 10),
     legend.position = "right",
     axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
-  coord_flip()  # Flip for better readability
+  coord_flip()  
 
 
 crash_freq_plotly <- ggplotly(crash_freq_plot, tooltip = c("x", "y", "fill"))
@@ -1146,9 +1082,12 @@ crash_freq_heatmap_plotly
 
 ```{r, include=T, results='markup',message=TRUE}
 
+filtered_dataset <- dataset %>%
+  filter(!func_sysname %in% c("Unknown", "Not Reported", "Trafficway Not in State Inventory"),
+         !rur_urbname %in% c("Unknown", "Not Reported", "Trafficway Not in State Inventory"))
+
 # Summarize crash severity and frequency by functional system and urban/rural classification
-summary_data <- dataset %>%
-  filter(rur_urbname != "Unknown" & rur_urbname != "Not Reported" & rur_urbname != "Trafficway Not in State Inventory") %>%
+summary_data <- filtered_dataset %>%
   group_by(rur_urbname, func_sysname) %>%
   summarise(
     Avg_Severity = mean(fatals, na.rm = TRUE),
@@ -1156,84 +1095,41 @@ summary_data <- dataset %>%
   ) %>%
   ungroup()
 
-ui <- fluidPage(
-  titlePanel("Comparing Crash Characteristics on Urban vs. Rural Functional Systems"),
+for (func_sys in unique(summary_data$func_sysname)) {
   
-  sidebarLayout(
-    sidebarPanel(
-      selectInput("system_select", "Select Functional System:", choices = unique(summary_data$func_sysname)),
-      hr(),
-      helpText("Select a functional system to compare crash severity and frequency in urban vs. rural areas.")
-    ),
-    
-    mainPanel(
-      tabsetPanel(
-        tabPanel("Crash Severity", plotlyOutput("severityPlot")),
-        tabPanel("Crash Frequency", plotlyOutput("frequencyPlot")),
-        tabPanel("Statistical Test Results", verbatimTextOutput("testResults"))
-      )
+  subset <- summary_data %>%
+    filter(func_sysname == func_sys)
+  
+  # Plot for Average Crash Severity with Urban and Rural together
+  severity_plot <- ggplot(subset, aes(x = rur_urbname, y = Avg_Severity, fill = rur_urbname)) +
+    geom_bar(stat = "identity", position = "dodge", color = "black") +
+    labs(title = paste("Average Crash Severity by Area Type -", func_sys),
+         x = "Area Type (Urban/Rural)",
+         y = "Avg. Severity") +
+    scale_fill_manual(values = c("Urban" = "skyblue", "Rural" = "salmon")) +
+    theme_minimal(base_size = 10) +
+    theme(
+      plot.title = element_text(size = 12, face = "bold"),
+      legend.position = "none"
     )
-  )
-)
-
-server <- function(input, output){
   
-  # Filter data based on selected functional system
-  filtered_data <- reactive({
-    summary_data %>%
-      filter(func_sysname == input$system_select)
-  })
+  print(severity_plot)
   
-  # Plot: Average Crash Severity in Urban vs. Rural Areas
-  output$severityPlot <- renderPlotly({
-    severity_plot <- ggplot(filtered_data(), aes(x = rur_urbname, y = Avg_Severity, fill = rur_urbname)) +
-      geom_bar(stat = "identity", position = "dodge", color = "black") +
-      labs(title = paste("Average Crash Severity in", input$system_select),
-           x = "Area Type (Urban/Rural)",
-           y = "Average Crash Severity") +
-      scale_fill_manual(values = c("Urban" = "skyblue", "Rural" = "salmon")) +
-      theme_minimal() +
-      theme(plot.title = element_text(hjust = 0.5))
-    
-    ggplotly(severity_plot, tooltip = c("x", "y"))
-  })
+  # Plot for Crash Frequency with Urban and Rural together
+  frequency_plot <- ggplot(subset, aes(x = rur_urbname, y = Crash_Frequency, fill = rur_urbname)) +
+    geom_bar(stat = "identity", position = "dodge", color = "black") +
+    labs(title = paste("Crash Frequency by Area Type -", func_sys),
+         x = "Area Type (Urban/Rural)",
+         y = "Frequency") +
+    scale_fill_manual(values = c("Urban" = "lightgreen", "Rural" = "darkorange")) +
+    theme_minimal(base_size = 10) +
+    theme(
+      plot.title = element_text(size = 12, face = "bold"),
+      legend.position = "none"
+    )
   
-  # Plot: Crash Frequency in Urban vs. Rural Areas
-  output$frequencyPlot <- renderPlotly({
-    frequency_plot <- ggplot(filtered_data(), aes(x = rur_urbname, y = Crash_Frequency, fill = rur_urbname)) +
-      geom_bar(stat = "identity", position = "dodge", color = "black") +
-      labs(title = paste("Crash Frequency in", input$system_select),
-           x = "Area Type (Urban/Rural)",
-           y = "Crash Frequency") +
-      scale_fill_manual(values = c("Urban" = "lightgreen", "Rural" = "darkorange")) +
-      theme_minimal() +
-      theme(plot.title = element_text(hjust = 0.5))
-    
-    ggplotly(frequency_plot, tooltip = c("x", "y"))
-  })
-
-# Perform t-tests to compare severity and frequency between Urban and Rural areas
-  output$testResults <- renderPrint({
-    data <- filtered_data()
-    
-    # Check if we have enough data for t-tests
-    if (nrow(data) >= 2) {
-      severity_ttest <- t.test(Avg_Severity ~ rur_urbname, data = data)
-      frequency_ttest <- t.test(Crash_Frequency ~ rur_urbname, data = data)
-      
-      cat("T-Test Results for Crash Severity:\n")
-      print(severity_ttest)
-      cat("\n\n")
-      
-      cat("T-Test Results for Crash Frequency:\n")
-      print(frequency_ttest)
-    } else {
-      cat("Not enough data for t-tests.")
-    }
-  })
+  print(frequency_plot)
 }
-
-shinyApp(ui = ui, server = server)
 ```
 
 ### **Are there any noticeable trends in fatal accidents over the years?**
@@ -1285,7 +1181,7 @@ if (non_missing_count >= 3 && non_missing_count <= 5000) {
 qqnorm(dataset$total_fatalities, main="Q-Q Plot for Total Fatalities")
 qqline(dataset$total_fatalities, col="red")
 ```
-###The Q-Q plot displays the quantiles of the sample data (total fatalities) against the quantiles of a theoretical normal distribution. If the data points closely follow the red line, it indicates that the data is normally distributed.
+### The Q-Q plot displays the quantiles of the sample data (total fatalities) against the quantiles of a theoretical normal distribution. If the data points closely follow the red line, it indicates that the data is normally distributed.
 
 ## Statistical Test
 
@@ -1386,7 +1282,7 @@ print(high_risk_states)
 
 ### This analysis underscores the need for targeted traffic safety interventions, particularly during months identified with high fatality counts.
 
-#Checking if the no.of fatalities have been decreasing or increasing over the months in different regions
+# Checking if the no.of fatalities have been decreasing or increasing over the months in different regions
 
 
 ```{r}
@@ -1583,3 +1479,16 @@ if (correlation_severity$p.value < 0.05) {
   cat("- There is no significant relationship between EMS arrival time and the severity of accidents.\n")
 }
 ```
+
+## Key Findings:
+#### Fatal accidents are more frequent between 6 pm and 10 pm and on weekends, with late-night hours linked to increased severity
+#### Clear weather conditions see the highest fatalities, while poorly lit roads (“Dark - Not Lighted”) have elevated risks.
+#### Highways and major arterials report the most fatalities, likely influenced by higher speeds and traffic volume.
+#### EMS response time did not significantly affect fatality severity, suggesting a greater need for preventive measures over emergency response.
+
+## Limitation
+#### Solely focus on accident file, excluding critical behavioral aspects like impaired driving or motorist fatigue
+
+## Further considerations: Cross Factor Analysis
+#### To gain more comprehensive understanding, further analysis should integrate these factors, examining the interactive effect on fatal accidents
+#### investigate the underlying explanation for our analysis result
