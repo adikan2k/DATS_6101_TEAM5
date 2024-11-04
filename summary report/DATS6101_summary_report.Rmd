@@ -1,0 +1,466 @@
+---
+title: "DATS6101_Summary_Report"
+author: "Team 5"
+date: "2024-11-01"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    code_folding: hide
+---
+
+```{r message=TRUE, include=FALSE, results='asis'}
+# Loading the necessary libraries
+library(readr)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(ggplot2)
+library(plotly)
+library(car)
+library(PMCMRplus)
+library(here)
+library(shiny)
+```
+
+```{r message=TRUE, include=FALSE, results='markup'}
+# Loading the dataset
+
+dataset <- read_csv("dataset.csv")
+
+# Now viewing the structure of the dataset
+str(dataset)
+summary(dataset)
+```
+
+```{r message=TRUE, include=FALSE, results='markup'}
+dataset <- dataset %>% distinct()
+```
+
+
+# Abstract 
+
+# Introduction
+- Background
+- Objectives
+- Initial researh questions (areas of interest eg. temporal....)
+- How did the research you gathered contribute to your question development?
+
+
+# Dataset Overview
+
+This study utilized the Accidents data file from the Fatality Analysis Reporting System (FARS), collected and compiled by the National Highway Traffic Safety Administration (NHTSA) for 2022. FARS compiles and reports the characteristics of vehicle collisions on public roads that result in a fatality within 30 days of the crash. Each observation in the data set represents a fatal crash and includes detailed information on crash characteristics and environmental conditions at the time of the incident. The key variables include:
+
+- **Temporal Factors**: Month, day of the week, and hour of the day when accidents occurred.
+
+- **Environmental Factors**: Weather, lighting conditions, and road types
+
+- **Location and Infrastructure**: State, urban/rural classification, road type
+
+- **EMS**: EMS response time
+
+- **Severity Indicators**: Number of fatalities
+
+The data set covers all 50 states, the District of Columbia, and Puerto Rico. It provides essential details such as crash location, time, and environmental factors like weather, which are used to analyze traffic fatalities and identify contributing factors for improving road safety.
+
+The FARS gathers information through a cooperative agreement between the NHTSA and each state's government. FARS analysts are responsible for collecting data from various state documents, including police crash reports, death certificates, vehicle registration files, and coroner reports. Analysts code the data into electronic files, which are checked for accuracy before being made publicly available.
+
+A limitation of the dataset is its scope: it includes only data from 2022 and exclusively fatal accidents, preventing analysis of year-over-year trends or non-fatal accidents, which restricts broader insights into overall road safety. Additionally, the dataset lacks behavioral data, such as driver impairment or fatigue, which are often critical contributors to fatal accidents.
+
+# Data Preprocessing
+Next, we check for duplicate rows. Let's clear them out!
+```{r, include=T, results='markup',message=TRUE}
+dataset <- dataset %>% distinct()
+```
+
+Moving on to handling missing values...
+```{r, include=T, results='markup',message=TRUE}
+missing_values <- colSums(is.na(dataset))
+print(missing_values[missing_values > 0])
+```
+
+Drop columns with missing values: x, y (duplicated), and tway_id2 (irrelevant)
+```{r}
+# Drop columns with missing values
+dataset <- dataset %>% 
+  select(
+    -c("TWAY_ID2",
+       "x",
+       "y"))
+```
+
+*Dropping columns with duplicated meaning and irrelevant*
+```{r, include=T, results='markup',message=TRUE}
+dataset <- dataset %>% select(-STATE, -CITY, -COUNTY, -MONTH, -DAYNAME, -DAY_WEEK, -MINUTENAME, -ROUTE, -RUR_URB, -FUNC_SYS, -RD_OWNER, -NHS, -SP_JUR, -LATITUDENAME, -LONGITUDNAME, -MILEPT, -HARM_EV, -MAN_COLL, -MILEPTNAME, -RELJCT1, -RELJCT2, -TYP_INT, -REL_ROAD, -WRK_ZONE, -LGT_COND, -WEATHER, -SCH_BUS, -RAIL, -NOT_MIN, -ARR_MINNAME, -ARR_HOUR, -HOSP_MN, -SCH_BUSNAME, -RAILNAME, -PERNOTMVIT, -VE_FORMS, -PERSONS)
+
+```
+
+Clean the column names
+```{r}
+# Lets rename columns for consistency
+colnames(dataset)<- str_to_lower(colnames(dataset))
+colnames(dataset) <- str_replace_all(colnames(dataset), " ", "_")
+colnames(dataset)
+```
+
+Convert variables into correct data types
+```{r}
+
+# Convert some variables into factor variables
+dataset$rur_urbname <- factor(dataset$rur_urbname)
+dataset$day_weekname <- factor(dataset$day_weekname, levels = c("Sunday","Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+dataset$func_sysname <- factor(dataset$func_sysname)
+dataset$lgt_condname <- factor(dataset$lgt_condname)
+dataset$weathername <-factor(dataset$weathername)
+dataset$statename <- factor(dataset$statename)
+
+str(dataset)
+```
+
+# Analyses and Results
+
+## Temporal Analysis
+
+```{r Q1:Create Temporal Subset, include=FALSE}
+# Select columns consists of temporal factors (month, day, day_week, hour) and no of fatalities (fatals)
+df_temporal <- dataset %>% 
+  select("monthname",
+         "day",
+         "day_weekname",
+         "hour",
+         "fatals")
+
+# Create a new column to stored the date
+df_temporal <- df_temporal %>%
+  mutate(
+    date = as.Date(paste("2022", monthname, day, sep = "-"), format = "%Y-%b-%d"),
+    day_type = ifelse(day_weekname %in% c("Saturday", "Sunday"), "Weekend", "Weekday"),
+   fatal_category = ifelse(fatals > 1, "multiple", "one"),
+    time_of_day = case_when(
+    hour < 6 ~ "Early Morning",
+    hour >= 6 & hour <12 ~ "Morning",
+    hour >= 12 & hour < 18 ~ "Afternoon",
+    hour >= 18 ~ "Evening")) 
+
+# convert into factor variable and set up level
+df_temporal$day_weekname <- factor(df_temporal$day_weekname, levels = c("Sunday","Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+df_temporal$time_of_day <- factor(df_temporal$time_of_day, levels = c("Early Morning", "Morning", "Afternoon", "Evening"))
+
+```
+
+```{r include=FALSE}
+# Data frame for daily fatalities
+df_daily <- df_temporal %>%
+  group_by(date, day_weekname) %>%
+  summarise(
+    total_accidents = n(),
+    average_fatals = mean(fatals),
+    total_fatals = sum(fatals)
+  ) %>% 
+  ungroup()
+
+
+df_daily <- df_temporal %>%
+  group_by(date, day_weekname) %>%
+  summarise(
+    total_accidents = n(),
+    average_fatals = mean(fatals),
+    total_fatals = sum(fatals)
+  ) %>% 
+  ungroup()
+
+# convert to the right data type
+df_daily$day_weekname <- factor(df_daily$day_weekname, levels =  c("Sunday","Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+
+```
+### Exploratory Data Analysis
+
+#### Overview of Total Accidents and Fatalities
+##### Day of Week
+```{r include=FALSE}
+# Calculate for the frequency of day of week in the data frame
+unique_dates <- df_temporal %>%
+  select(date, day_weekname) %>%
+  distinct()
+unique_dates[order(unique_dates$date), ]
+
+# Count the frequency of day of week
+day_of_week_counts <- unique_dates %>%
+  group_by(day_weekname) %>%
+  summarise(count = n())
+day_of_week_counts
+
+# Count the frequency of Weekday and weekend
+weekday_weekend_counts <- day_of_week_counts %>%
+  mutate(category = ifelse(day_weekname %in% c("Saturday", "Sunday"), "Weekend", "Weekday"))
+
+# Summarize the total counts for Weekdays and Weekends
+total_weekday_weekend_counts <- weekday_weekend_counts %>%
+  group_by(category) %>%
+  summarise(total_count = sum(count))
+total_weekday_weekend_counts
+
+```
+
+```{r accident_wday summary statistics, echo=FALSE}
+df_wday_accidents <- df_temporal %>% 
+  group_by(day_weekname) %>% 
+  summarise(total_accidents = n(),
+            total_fatalities = sum(fatals),
+            avg_fatalities = mean(fatals))%>% 
+  ungroup()
+
+# Highest/Lowest/Average  Accident Counts
+highest_accidents_day <- df_wday_accidents %>%
+  filter(total_accidents == max(total_accidents))
+
+lowest_accidents_day <- df_wday_accidents %>%
+  filter(total_accidents == min(total_accidents))
+
+avg_accidents_day <- mean(df_wday_accidents$total_accidents)
+
+# Highest/Lowest/Average Fatalities
+highest_fatalities_day <- df_wday_accidents %>%
+  filter(total_fatalities == max(total_fatalities))
+
+lowest_fatalities_day <- df_wday_accidents %>%
+  filter(total_fatalities == min(total_fatalities))
+
+avg_fatalities_day <- mean(df_wday_accidents$total_fatalities)
+
+```
+
+```{r accidents_wday graph, fig.width=6, fig.height=3, echo=FALSE}
+df_wday_accidents <- df_wday_accidents %>%
+  mutate(day_type = ifelse(day_weekname %in% c("Saturday", "Sunday"), "Weekend", "Weekday"))
+
+
+# Data Visualization on Occurrence of fatal accidents per day of week
+df_temporal %>% ggplot(aes(x= day_weekname, fill = day_type)) +
+  geom_bar()+
+  labs(x = "Day of the Week", y = "Number of Fatal Accidents", 
+       title = "Count of Fatal Accidents by Day of the Week",
+       fill = "Day of Week") +  
+  scale_fill_manual(values = c("#bfbfbf", "#0072B2"), 
+                    labels = c("weekend", "weekday")) +
+  theme_minimal()
+
+```
+
+The average number of accidents per day of the week is 5,640, while the average number of fatalities is 6,112.14. Saturday has the highest total number of accidents, with 7,057 accidents and 7,735 fatalities, whereas Tuesday has the lowest, with 4,914 accidents and 5,292 fatalities. This distribution suggests that fatal accidents are more likely to occur on weekends.
+
+##### Hour of Day
+```{r include=FALSE}
+
+# Filter out unknown hour (hour==99)
+df_hour <- df_temporal %>% 
+  filter(hour != 99)
+
+df_hour_accidents <- df_hour %>% 
+  group_by(hour) %>% 
+  summarise(total_accidents = n(),
+            total_fatalities = sum(fatals))%>% 
+  ungroup()
+
+# Highest/Lowest/Average  Accident Counts
+top_5_accidents_hr <- df_hour_accidents %>%
+  arrange(desc(total_accidents)) %>%
+  slice(1:5)
+
+bottom_5_accidents_hr <- df_hour_accidents %>%
+  arrange(total_accidents) %>%
+  slice(1:5)
+
+avg_accidents_hr <- mean(df_hour_accidents$total_accidents)
+
+# Highest/Lowest/Average Fatalities
+top_5_fatalities_hr <- df_hour_accidents %>%
+  arrange(desc(total_fatalities)) %>%
+  slice(1:5)
+
+bottom_5_fatalities_hr <- df_hour_accidents %>%
+  arrange(total_fatalities) %>%
+  slice(1:5)
+
+avg_fatalities_hr <- mean(df_hour_accidents$total_fatalities)
+```
+
+```{r}
+# Count of Fatal Accidents
+df_hour %>% ggplot(aes(x= hour, fill = time_of_day)) +
+  geom_bar()+
+  labs(x = "hour", y = "Number of Fatal Accidents", 
+       title = "Count of Fatal Accidents by Hour",
+       fill = "time of day")+
+  scale_fill_manual(values = c("#999999","#E69F00", "#D55E00", "#0072B2"))+
+  theme_minimal()
+
+```
+
+The frequency graph shows that fatal accidents decrease from 12 AM to 6 AM, remain low and stable between 6 AM and 12 PM, increase from 12 PM to 6 PM, peaking at 6 PM, and then slightly decrease after 9 PM.The average number of accidents and fatalities by day of the week are 1,632.38 and 1,769.12, respectively. The hours with the highest accident and fatality counts are identical, with the peak occurring from 6 PM to 10 PM, while the lowest accident and fatality counts are at 3 AM, 4 AM, 8 AM, 9 AM, and 10 AM. This alignment indicates that the distribution of accidents and fatalities follows a consistent pattern across the day. 
+
+
+#### Daily Fatalities
+
+```{r echo=FALSE}
+# Top 5 Highest Daily Fatalities
+top_5_highest_daily_fatal = head(df_daily[order(df_daily$total_fatals, decreasing = TRUE), ], 5)
+```
+
+```{r Day of Week: data viz}
+# names of days of week
+df_daily <- df_daily %>%
+  mutate(day_type = ifelse(day_weekname %in% c("Saturday", "Sunday"), "Weekend", "Weekday"))
+
+
+# Boxplot of daily fatlities by day of week
+df_daily %>% ggplot(aes(x = day_weekname, y = total_fatals, fill = day_type))+
+  geom_boxplot() +
+  labs(x = "Day of the Week", 
+       y = "Daily Fatalities", 
+       title = "Daily Fatalities by Day of the Week")+
+  scale_fill_manual(values = c("#bfbfbf","#0072B2"))
+```
+The boxplot shows higher median fatalities on weekends, especially Saturday, compared to weekdays, which have lower and consistent counts. Weekends also show more variability, indicating higher risk and fluctuating fatality numbers on those days.The top 5 dates with the highest daily fatalities predominantly fall on Saturdays, suggesting weekends, particularly Saturdays, are consistently high-risk for fatal accidents.
+
+## Research Questions and Hypothesis Development
+
+### Research Questions
+
+Our exploratory data analysis (EDA) revealed distinct peaks and patterns in accident occurrences throughout the day, prompting us to simplify the analysis by grouping hours into four time periods: early morning, morning, afternoon, and evening. Observing these patterns led us to refine our initial research questions to focus specifically on time periods and days of the week, which appeared to influence accident frequency and severity. Given the imbalance in fatality distribution, we also categorized severity into "one" and "multiple" fatality groups.
+
+Based on our EDA, we can sketch an initial answer: there is likely a significant effect of both day of the week and time period on the frequency and severity of accidents. Specifically, weekends and evening hours seem to be associated with increased accident counts and fatalities. Further statistical testing will help confirm these observations and provide more definitive answers. Previous studies (Farmer & Williams, 2005; Weast, 2018) highlighted a weekend effect on fatalities, but relied primarily on descriptive analysis. Our goal is to extend this work by adding statistical testing to assess these relationships. 
+
+- SMART question 1: Do **day of the week** and **time period of the day** affect the occurrence and fatalities of fatal accidents?
+- SMART question 2: Does **day of the week** affect the day to day variation on total fatalities per day?
+
+### Hypotheses Development
+
+To address these research questions, we formulated the following hypotheses:
+
+**Occurrence Analysis**
+
+- **Null Hypothesis (H0)**: Accidents are evenly distributed across the days of the week/time periods of the day.
+- **Alternative Hypothesis (H1)**: Accidents are not evenly distributed across the days of the week/time periods of the day.
+  
+**Fatality Analysis**
+
+- **Null Hypothesis (H0)**: The distribution of fatality categories (e.g., "one" vs. "multiple") is independent of the day of the week/time period of the day.
+- **Alternative Hypothesis (H1)**: The distribution of fatality categories (e.g., "one" vs. "multiple") is independent of the day of the week/time period of the day.
+
+**Daily Fatalities**
+
+- **Null Hypothesis (H0)**: The mean number of fatalities per day is the same across all days of the week.
+- **Alternative Hypothesis (H1)**: At least one day of the week has a mean number of fatalities per day that is different from the others.
+
+## Statistical Tests
+
+### Occurrence Analysis
+
+We conducted chi-squared goodness of fit tests to determine if accidents were evenly distributed across different times. Appendix A1 shows p-values below 0.05 for both days of the week and time periods, indicating that accidents are not evenly distributed. The standardized residuals reveal that Saturday (18.87) and Sunday (6.10) have significantly more accidents than expected, particularly on Saturday. For time periods, Evening (33.34) stands out, indicating significantly more accidents during that time.
+
+### Fatality Analysis
+
+We conducted chi-squared independence tests to determine if accident severity (number of fatalities) is related to time variables. The results indicate significant relationships for both day of the week (p = 0.006) and time of day (p = 1e-05) (see Appendix A2). Standardized residuals reveal significantly more multiple-fatality accidents on Saturday and Sunday, especially Saturday. For time of day, Early Morning has significantly more multiple-fatality accidents, while Morning and Evening have fewer.
+
+### Daily Fatalities Analysis
+
+To determine if there are significant differences in average fatalities across days of the week, we conducted an ANOVA test. Given the large sample sizes, the Central Limit Theorem ensures the mean fatalities' distribution is approximately normal, which is supported by normality tests. However, Levene's test showed significant differences in variances (p < 0.05), violating homogeneity, so we used Welch's ANOVA.
+
+The results show a significant difference in mean fatalities across days (F = 42, p < 2e-16; see Appendix A3). The Games-Howell test indicates that Sunday and Saturday have significantly higher fatalities compared to weekdays, with Friday similar to Sunday. Monday, Tuesday, Wednesday, and Thursday show no significant differences. Overall, weekends have notably higher fatalities per day.
+
+### Insights
+1. **Occurrence Analysis**: Accidents are not evenly distributed across days of the week or time periods. Saturdays and Sundays have significantly more accidents, particularly Saturdays, while evenings show the highest number of accidents among time periods. This suggests that weekends and evenings are high-risk times for accidents.
+2. **Fatality Analysis**: Accident severity, measured by the number of fatalities, is significantly associated with time factors. Multiple-fatality accidents are more likely to occur on weekends, especially on Saturdays, and during early morning hours. This indicates weekends and early mornings are particularly dangerous in terms of accident severity.
+3. **Daily Analysis**: Welch's ANOVA and Games-Howell tests confirm significant differences in average fatalities across days of the week, with Saturdays and Sundays showing the highest mean fatalities. Fridays are similar to Sundays, while weekdays (Monday through Thursday) have notably lower fatalities. This further emphasizes the increased risk on weekends, highlighting the need for targeted interventions during these high-risk periods.
+
+
+# Conclusion
+
+Fatal accidents are most frequent between 6 pm and 10 pm, particularly on weekends, with late-night hours linked to increased severity. Highways and major arterials report the highest number of fatalities, possibly due to higher speeds and traffic volumes. Clear weather conditions are associated with a higher rate of fatalities, while poorly lit roads also present elevated risks. EMS response times did not significantly impact accident severity, suggesting that preventive safety measures should be prioritized over emergency response.
+
+Given these findings, targeted interventions should address high-risk periods, such as evenings, late nights, and weekends, with a focus on speed control and improving road lighting.
+
+The dataset's limitations, such as its focus only on 2022 fatal accidents and the lack of behavioral data, limit the analysis of broader safety trends and contributing behavioral factors. Future research should include year-over-year comparisons and incorporate behavioral data, such as impaired driving or fatigue, for a more comprehensive understanding of accident dynamics. Additionally, integrating temporal, environmental, and infrastructural factors to explore their interactive effects could further enhance road safety insights.
+
+
+# References
+# Appendix
+## Appendix A: Statistical Test Results
+### A.1 Chi-squared Goodness of Fit Test Results
+- **Days of the Week**
+```{r Chi: Accident Day, echo=FALSE}
+# chi-squared test on the occurrence of accident
+table(df_temporal$day_weekname)
+
+chi_sq_test <- chisq.test(table(df_temporal$day_weekname))
+print(chi_sq_test)
+
+# Get observed and expected counts
+observed <- chi_sq_test$observed
+expected <- chi_sq_test$expected
+
+# Calculate standardized residuals
+standardized_residuals <- (observed - expected) / sqrt(expected)
+print(standardized_residuals)
+```
+
+- **Time periods of the Day**
+```{r Chi: Accident Hour, echo=FALSE}
+# chi-squared test on the occurrence of accident
+table(df_hour$time_of_day)
+chisq_result <- chisq.test(table(df_hour$time_of_day))
+chisq_result
+
+# Get observed and expected counts
+observed <- chisq_result$observed
+expected <- chisq_result$expected
+
+# Calculate standardized residuals
+standardized_residuals <- (observed - expected) / sqrt(expected)
+print(standardized_residuals)
+```
+
+### A.2 Chi-squared Test of Independence Results
+- **Days of the Week**
+```{r Chi: Fatalities Day, echo=FALSE}
+# Chi-squared test: hour of day
+chi_sq_result <- chisq.test(table(df_temporal$day_weekname, df_temporal$fatal_category))
+print(chi_sq_result)
+
+# standardized residuals table
+# get the expected and observed values
+observed <- chi_sq_result$observed
+expected <- chi_sq_result$expected
+# calculate the standardized residuals
+standardized_residuals <- (observed - expected) / sqrt(expected)
+print(standardized_residuals)
+```
+- **Time periods of the Day**
+```{r Chi: Fatalities Hour, echo=FALSE}
+# Chi-squared test: hour of day
+chi_sq_result <- chisq.test(table(df_temporal$time_of_day, df_temporal$fatal_category))
+print(chi_sq_result)
+
+# standardized residuals table
+# get the expected and observed values
+observed <- chi_sq_result$observed
+expected <- chi_sq_result$expected
+# calculate the standardized residuals
+standardized_residuals <- (observed - expected) / sqrt(expected)
+print(standardized_residuals)
+```
+
+### A.3 ANOVA Test Results of Fatalities per Day
+
+```{r Day of Week: ANOVA}
+# Welch's ANOVA
+Wanova_result <- oneway.test(total_fatals ~ day_weekname, data = df_daily, var.equal = FALSE)
+Wanova_result
+# post hoc test-Games Howell
+
+posthoc_result <- gamesHowellTest(total_fatals ~ day_weekname, data = df_daily)
+print(posthoc_result)
+```
+
