@@ -54,18 +54,17 @@ This study utilized the Accidents data file from the Fatality Analysis Reporting
 
 - **Temporal Factors**: Month, day of the week, and hour of the day when accidents occurred.
 
-- **Environmental Factors**: Weather, lighting conditions, and road types.
+- **Environmental Factors**: Weather, lighting conditions, and road types
 
-- **Severity Indicators**: Number of fatalities
-
-- **Location and Infrastructure**: State, urban/rural classification, road type, etc.
+- **Location and Infrastructure**: State, urban/rural classification, road type
 
 - **EMS**: EMS response time
+
+- **Severity Indicators**: Number of fatalities
 
 The data set covers all 50 states, the District of Columbia, and Puerto Rico. It provides essential details such as crash location, time, and environmental factors like weather, which are used to analyze traffic fatalities and identify contributing factors for improving road safety.
 
 The FARS gathers information through a cooperative agreement between the NHTSA and each state's government. FARS analysts are responsible for collecting data from various state documents, including police crash reports, death certificates, vehicle registration files, and coroner reports. Analysts code the data into electronic files, which are checked for accuracy before being made publicly available.
-<<<<<<< Updated upstream
 
 A limitation of the dataset is its scope: it includes only data from 2022 and exclusively fatal accidents, preventing analysis of year-over-year trends or non-fatal accidents, which restricts broader insights into overall road safety. Additionally, the dataset lacks behavioral data, such as driver impairment or fatigue, which are often critical contributors to fatal accidents.
 
@@ -150,6 +149,31 @@ df_temporal$time_of_day <- factor(df_temporal$time_of_day, levels = c("Early Mor
 
 ```
 
+```{r include=FALSE}
+# Data frame for daily fatalities
+df_daily <- df_temporal %>%
+  group_by(date, day_weekname) %>%
+  summarise(
+    total_accidents = n(),
+    average_fatals = mean(fatals),
+    total_fatals = sum(fatals)
+  ) %>% 
+  ungroup()
+
+
+df_daily <- df_temporal %>%
+  group_by(date, day_weekname) %>%
+  summarise(
+    total_accidents = n(),
+    average_fatals = mean(fatals),
+    total_fatals = sum(fatals)
+  ) %>% 
+  ungroup()
+
+# convert to the right data type
+df_daily$day_weekname <- factor(df_daily$day_weekname, levels =  c("Sunday","Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+
+```
 ### Exploratory Data Analysis
 
 #### Overview of Total Accidents and Fatalities
@@ -342,24 +366,6 @@ We conducted chi-squared independence tests to determine if accident severity (n
 
 ### Daily Fatalities Analysis
 
-```{r Day of Week: data viz}
-# names of days of week
-df_daily
-
-
-df_daily <- df_daily %>%
-  mutate(day_type = ifelse(day_weekname %in% c("Saturday", "Sunday"), "Weekend", "Weekday"))
-
-
-# Boxplot of daily fatlities by day of week
-df_daily %>% ggplot(aes(x = day_weekname, y = total_fatals, fill = day_type))+
-  geom_boxplot() +
-  labs(x = "Day of the Week", 
-       y = "Daily Fatalities", 
-       title = "Daily Fatalities by Day of the Week")+
-  scale_fill_manual(values = c("#bfbfbf","#0072B2"))
-```
-
 To determine if there are significant differences in average fatalities across days of the week, we conducted an ANOVA test. Given the large sample sizes, the Central Limit Theorem ensures the mean fatalities' distribution is approximately normal, which is supported by normality tests. However, Levene's test showed significant differences in variances (p < 0.05), violating homogeneity, so we used Welch's ANOVA.
 
 The results show a significant difference in mean fatalities across days (F = 42, p < 2e-16; see Appendix A3). The Games-Howell test indicates that Sunday and Saturday have significantly higher fatalities compared to weekdays, with Friday similar to Sunday. Monday, Tuesday, Wednesday, and Thursday show no significant differences. Overall, weekends have notably higher fatalities per day.
@@ -447,31 +453,6 @@ print(standardized_residuals)
 ```
 
 ### A.3 ANOVA Test Results of Fatalities per Day
-```{r include=FALSE}
-# Data frame for daily fatalities
-df_daily <- df_temporal %>%
-  group_by(date, day_weekname) %>%
-  summarise(
-    total_accidents = n(),
-    average_fatals = mean(fatals),
-    total_fatals = sum(fatals)
-  ) %>% 
-  ungroup()
-
-
-df_daily <- df_temporal %>%
-  group_by(date, day_weekname) %>%
-  summarise(
-    total_accidents = n(),
-    average_fatals = mean(fatals),
-    total_fatals = sum(fatals)
-  ) %>% 
-  ungroup()
-
-# convert to the right data type
-df_daily$day_weekname <- factor(df_daily$day_weekname, levels =  c("Sunday","Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
-
-```
 
 ```{r Day of Week: ANOVA}
 # Welch's ANOVA
