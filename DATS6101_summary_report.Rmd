@@ -58,13 +58,14 @@ This study utilized the Accidents data file from the Fatality Analysis Reporting
 
 - **Severity Indicators**: Number of fatalities
 
-- **Location and Infrastructure**: State, urban/rural classification, road type
+- **Location and Infrastructure**: State, urban/rural classification, road type, etc.
 
 - **EMS**: EMS response time
 
 The data set covers all 50 states, the District of Columbia, and Puerto Rico. It provides essential details such as crash location, time, and environmental factors like weather, which are used to analyze traffic fatalities and identify contributing factors for improving road safety.
 
 The FARS gathers information through a cooperative agreement between the NHTSA and each state's government. FARS analysts are responsible for collecting data from various state documents, including police crash reports, death certificates, vehicle registration files, and coroner reports. Analysts code the data into electronic files, which are checked for accuracy before being made publicly available.
+<<<<<<< Updated upstream
 
 A limitation of the dataset is its scope: it includes only data from 2022 and exclusively fatal accidents, preventing analysis of year-over-year trends or non-fatal accidents, which restricts broader insights into overall road safety. Additionally, the dataset lacks behavioral data, such as driver impairment or fatigue, which are often critical contributors to fatal accidents.
 
