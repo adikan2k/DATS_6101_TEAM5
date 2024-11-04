@@ -337,7 +337,7 @@ We conducted chi-squared goodness of fit tests to determine if accidents were ev
 
 ### Fatality Analysis
 
-We conducted chi-squared independence tests to determine if accident severity (number of fatalities) is related to time variables. The results indicate significant relationships for both day of the week (p = 0.006) and time of day (p = 1e-05). Standardized residuals reveal significantly more multiple-fatality accidents on Saturday and Sunday, especially Saturday. For time of day, Early Morning has significantly more multiple-fatality accidents, while Morning and Evening have fewer.
+We conducted chi-squared independence tests to determine if accident severity (number of fatalities) is related to time variables. The results indicate significant relationships for both day of the week (p = 0.006) and time of day (p = 1e-05) (see Appendix A2). Standardized residuals reveal significantly more multiple-fatality accidents on Saturday and Sunday, especially Saturday. For time of day, Early Morning has significantly more multiple-fatality accidents, while Morning and Evening have fewer.
 
 ### Daily Fatalities Analysis
 
@@ -361,7 +361,7 @@ df_daily %>% ggplot(aes(x = day_weekname, y = total_fatals, fill = day_type))+
 
 To determine if there are significant differences in average fatalities across days of the week, we conducted an ANOVA test. Given the large sample sizes, the Central Limit Theorem ensures the mean fatalities' distribution is approximately normal, which is supported by normality tests. However, Levene's test showed significant differences in variances (p < 0.05), violating homogeneity, so we used Welch's ANOVA.
 
-The results show a significant difference in mean fatalities across days (F = 42, p < 2e-16). The Games-Howell test indicates that Sunday and Saturday have significantly higher fatalities compared to weekdays, with Friday similar to Sunday. Monday, Tuesday, Wednesday, and Thursday show no significant differences. Overall, weekends have notably higher fatalities per day.
+The results show a significant difference in mean fatalities across days (F = 42, p < 2e-16; see Appendix A3). The Games-Howell test indicates that Sunday and Saturday have significantly higher fatalities compared to weekdays, with Friday similar to Sunday. Monday, Tuesday, Wednesday, and Thursday show no significant differences. Overall, weekends have notably higher fatalities per day.
 
 ### Insights
 1. **Occurrence Analysis**: Accidents are not evenly distributed across days of the week or time periods. Saturdays and Sundays have significantly more accidents, particularly Saturdays, while evenings show the highest number of accidents among time periods. This suggests that weekends and evenings are high-risk times for accidents.
