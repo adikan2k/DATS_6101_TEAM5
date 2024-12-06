@@ -146,6 +146,162 @@ for (col in selected_columns) {
     theme_minimal()
   print(boxplot)
 }
+```
+
+4. What temporal patterns exist in rise and fall of song popularity?
+### Temporal Analysis
+
+##Temporal Trends in Song Popularity
+#Aggregate Average Popularity Over Time
+```{r}
+# Aggregated average popularity over time
+popularity_trend <- df_cleaned %>%
+  group_by(snapshot_date) %>%
+  summarize(avg_popularity = mean(popularity, na.rm = TRUE))
+
+# Plot average popularity trend over time
+ggplot(popularity_trend, aes(x = snapshot_date, y = avg_popularity)) +
+  geom_line(color = "blue") +
+  labs(title = "Trend in Average Song Popularity Over Time",
+       x = "Snapshot Date", y = "Average Popularity") +
+  theme_minimal()
+```
+
+# Seasonal analysis: popularity by month
+```{r}
+df_cleaned <- df_cleaned %>%
+  mutate(month = as.integer(format(snapshot_date, "%m")))
+
+monthly_trend <- df_cleaned %>%
+  group_by(month) %>%
+  summarize(avg_popularity = mean(popularity, na.rm = TRUE))
+
+ggplot(monthly_trend, aes(x = factor(month), y = avg_popularity)) +
+  geom_bar(stat = "identity", fill = "lightblue") +
+  labs(title = "Average Popularity by Month", x = "Month", y = "Average Popularity") +
+  theme_minimal()
+```
+
+# Duration of songs in the Top 50
+```{r}
+df_cleaned <- df_cleaned %>%
+  group_by(name, artists) %>% 
+  summarize(first_appearance = min(as.Date(snapshot_date)),
+            last_appearance = max(as.Date(snapshot_date))) %>%
+  mutate(duration_in_top50 = as.numeric(last_appearance - first_appearance))
+
+ggplot(df_cleaned, aes(x = duration_in_top50)) +
+  geom_histogram(fill = "orange", bins = 30) +
+  labs(title = "Distribution of Song Duration in the Top 50",
+       x = "Duration (days)", y = "Count of Songs") +
+  theme_minimal()
+```
+
+### Advanced Analysis
+
+# Time series decomposition
+```{r}
+time_series_data <- df_cleaned %>%
+  group_by(first_appearance) %>%
+  summarize(avg_popularity = mean(duration_in_top50, na.rm = TRUE)) 
+
+popularity_ts <- ts(time_series_data$avg_popularity, start = c(2017, 1), frequency = 12) 
+decomposed <- decompose(popularity_ts)
+plot(decomposed)
+
+```
+# ANOVA: Release year vs. Popularity
+```{r}
+df_with_release_date <- top_songs %>% 
+  mutate(
+    album_release_date = as.Date(album_release_date, format = "%Y-%m-%d"), 
+    release_year = as.numeric(format(album_release_date, "%Y"))  
+  )
+anova_test <- aov(popularity ~ release_year, data = df_with_release_date)
+summary(anova_test)
+
+
+yearly_popularity <- df_with_release_date %>%
+  group_by(release_year) %>%
+  summarize(avg_popularity = mean(popularity, na.rm = TRUE))
+
+# line plot
+ggplot(yearly_popularity, aes(x = as.numeric(release_year), y = avg_popularity)) +
+  geom_line(size = 1, color = "blue") +
+  geom_point(size = 2, color = "red") +
+  labs(
+    title = "Average Song Popularity by Release Year",
+    x = "Release Year",
+    y = "Average Popularity"
+  ) +
+  theme_minimal()
 
 ```
 
+
+# Correlation: Days since release and popularity
+```{r}
+df_for_correlation <- top_songs %>%
+  mutate(
+    snapshot_date = as.Date(snapshot_date), 
+    album_release_date = as.Date(album_release_date), 
+    days_since_release = as.numeric(snapshot_date - album_release_date) 
+  )
+
+# Perform Pearson correlation test between days_since_release and popularity
+cor_test <- cor.test(df_for_correlation$days_since_release, df_for_correlation$popularity, method = "pearson")
+print(cor_test)
+```
+
+
+# K-means clustering: Popularity trajectories
+```{r}
+popularity_matrix <- top_songs %>%
+  group_by(name, artists, snapshot_date) %>%
+  summarize(avg_popularity = mean(popularity, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = snapshot_date, values_from = avg_popularity, values_fill = 0)
+
+
+numeric_matrix <- popularity_matrix %>%
+  select(-name, -artists) 
+set.seed(123)
+kmeans_result <- kmeans(scale(numeric_matrix), centers = 3)
+
+# Add cluster assignments back to the original data
+popularity_matrix$cluster <- as.factor(kmeans_result$cluster)
+
+# Reshape the data back to long format for plotting
+popularity_long <- popularity_matrix %>%
+  pivot_longer(
+    cols = -c(name, artists, cluster),  
+    names_to = "snapshot_date",       
+    values_to = "avg_popularity"        
+  )
+
+# Convert snapshot_date back to Date format if necessary
+popularity_long$snapshot_date <- as.Date(popularity_long$snapshot_date)
+
+popularity_summary <- popularity_long %>%
+  group_by(snapshot_date, cluster) %>%
+  summarize(avg_popularity = mean(avg_popularity, na.rm = TRUE), .groups = "drop")
+
+# Create a scatter plot with smooth trend lines
+ggplot(popularity_summary, aes(x = snapshot_date, y = avg_popularity, color = cluster)) +
+  geom_point(alpha = 0.6) +  # Scatter points for average popularity
+  geom_smooth(method = "loess", se = FALSE) +  # Smooth trend lines
+  labs(
+    title = "Average Popularity Trends by Cluster",
+    x = "Snapshot Date",
+    y = "Average Popularity"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+
+
+# T-test: Global vs. regional popularity
+```{r}
+t_test <- t.test(popularity ~ country == "Global", data = top_songs, alternative = "two.sided")
+print(t_test)
+```
