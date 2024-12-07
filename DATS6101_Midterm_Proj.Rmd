@@ -55,6 +55,7 @@ library(shiny)
 
 ```{r, include=T, results='markup',message=TRUE}
 # Loading the dataset
+
 dataset <- read_csv("dataset.csv")
 
 # Now viewing the structure of the dataset
@@ -189,6 +190,7 @@ road_data <- dataset %>%
 
 
 ## Data Subsetting and Preparation
+
 Subset for temporal question
 ```{r Q1:Create Temporal Subset}
 # Select columns consists of temporal factors (month, day, day_week, hour) and no of fatalities (fatals)
@@ -310,6 +312,7 @@ df_hour %>% ggplot(aes(x= hour, fill = time_of_day)) +
 
 ```
 
+Given the patterns in hour of day, we will categorize day into two time group: Early morning, morning, afternoon, and evening.
 
 #### Day of Week
 ```{r}
@@ -322,7 +325,7 @@ df_wday_accidents <- df_wday_accidents %>%
 df_temporal %>% ggplot(aes(x= day_weekname, fill = day_type)) +
   geom_bar()+
   labs(x = "Day of the Week", y = "Number of Fatal Accidents", 
-       title = "Frequency of Fatal Accidents by Day of the Week",
+       title = "Count of Fatal Accidents by Day of the Week",
        fill = "Day of Week") +  
   scale_fill_manual(values = c("#bfbfbf", "#0072B2"), 
                     labels = c("weekend", "weekday")) +
@@ -402,21 +405,15 @@ colnames(df_hr_contingency)<- c("time_of_day", "fatal_category", "Freq")
 df_hr_contingency
 
 #data viz
-df_hr_contingency %>% 
-  ggplot(aes(x= time_of_day, y = Freq/sum(Freq), fill = fatal_category))+
-  geom_bar(stat="identity", alpha = 0.75) +
-  facet_wrap(~ fatal_category)+
-  labs(y = "Frequency")
-
 grouped_hr_contingency <- df_hr_contingency %>%
-  group_by(fatal_category) %>%
+  group_by(time_of_day) %>%
   mutate(proportion = Freq / sum(Freq))
 grouped_hr_contingency
 
 grouped_hr_contingency %>% 
   ggplot(aes(x= time_of_day, y=proportion, fill = fatal_category))+
   geom_bar(stat="identity", alpha = 0.75) +
-  facet_wrap(~ fatal_category)
+  facet_wrap(~ fatal_category,scales = "free_y")
 ```
 
 #### Day of Week
@@ -427,22 +424,22 @@ colnames(df_wday_contingency)<- c("day_weekname", "fatal_category", "Freq")
 
 # data visualization on Severity by day of week
 # Frequency Counts
-df_wday_contingency %>% ggplot(aes(x= day_weekname, y = Freq, fill = fatal_category))+
-  geom_bar(stat="identity", alpha = 0.75) +
-  facet_wrap(~ fatal_category)+
-  labs(x = "Day of the Week", y = "Frequency") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+#df_wday_contingency %>% ggplot(aes(x= day_weekname, y = Freq, fill = fatal_category))+
+#  geom_bar(stat="identity", alpha = 0.75) +
+#  facet_wrap(~ fatal_category)+
+#  labs(x = "Day of the Week", y = "Frequency") +
+#  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 # Proportion 
 grouped_wday_contingency <- df_wday_contingency %>%
-  group_by(fatal_category) %>%
+  group_by(day_weekname) %>%
   mutate(proportion = Freq / sum(Freq))
 grouped_wday_contingency
 
 grouped_wday_contingency %>% 
   ggplot(aes(x= day_weekname, y=proportion, fill = fatal_category))+
   geom_bar(stat="identity", alpha = 0.75) +
-  facet_wrap(~ fatal_category) +
+  facet_wrap(~ fatal_category,  scales = "free_y") +
     labs(x = "Day of the Week", y = "Proportion") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
@@ -537,13 +534,11 @@ df_daily %>% ggplot(aes(x = day_weekname, y = total_fatals, fill = day_type))+
        y = "Daily Fatalities", 
        title = "Daily Fatalities by Day of the Week")+
   scale_fill_manual(values = c("#bfbfbf","#0072B2"))
-
-
 ```
 
 The boxplot shows that daily fatalities are generally higher on weekends. This suggests that weekends tend to have a higher count of fatalities, potentially due to increased travel.
 
-## 2.3.2 Summary Statistics of Day of Week
+### 2.3.2 Summary Statistics of Day of Week
 ```{r avg daily fatalities by day of week}
  df_summary_day_week <- df_daily %>% 
   group_by(day_weekname) %>% 
@@ -1246,19 +1241,12 @@ shinyApp(ui = ui, server = server)
 
 ### In this section, we present visualizations to better understand the relationship between EMS arrival times and the number of fatalities. 
 
-### We start with a histogram of total fatalities, which provides insight into the frequency of fatal accidents across the dataset. 
 
-### Next, we include a boxplot illustrating the distribution of fatalities by month. By converting the `monthname` into a factor with a defined order, we ensure that the boxplot accurately reflects the seasonal variations in fatalities. This visualization highlights any monthly patterns or trends in fatal accidents, allowing for a clearer understanding of when fatalities are most likely to occur throughout the year.
+### We include a boxplot illustrating the distribution of fatalities by month. By converting the `monthname` into a factor with a defined order, we ensure that the boxplot accurately reflects the seasonal variations in fatalities. This visualization highlights any monthly patterns or trends in fatal accidents, allowing for a clearer understanding of when fatalities are most likely to occur throughout the year.
 
 ```{r graphical-representations}
 # Create total_fatalities based on the fatals column
 dataset$total_fatalities <- ifelse(dataset$fatals > 0, 1, 0)
-
-# Histogram of Total Fatalities
-ggplot(dataset, aes(x=total_fatalities)) +
-    geom_histogram(binwidth=1, fill="blue", color="black", alpha=0.7) +
-    labs(title="Histogram of Total Fatalities", x="Total Fatalities (0 = No, 1 = Yes)", y="Frequency") +
-    theme_minimal()
 
 # Boxplot of Fatalities by Month
 ggplot(dataset, aes(x=factor(monthname, levels=month.name), y=fatals)) +  # Convert monthname to a factor
@@ -1296,7 +1284,7 @@ if (non_missing_count >= 3 && non_missing_count <= 5000) {
 qqnorm(dataset$total_fatalities, main="Q-Q Plot for Total Fatalities")
 qqline(dataset$total_fatalities, col="red")
 ```
-###The Q-Q plot displays the quantiles of the sample data (total fatalities) against the quantiles of a theoretical normal distribution. If the data points closely follow the red line, it indicates that the data is normally distributed.
+### The Q-Q plot displays the quantiles of the sample data (total fatalities) against the quantiles of a theoretical normal distribution. If the data points closely follow the red line, it indicates that the data is normally distributed.
 
 ## Statistical Test
 
@@ -1397,7 +1385,7 @@ print(high_risk_states)
 
 ### This analysis underscores the need for targeted traffic safety interventions, particularly during months identified with high fatality counts.
 
-#Checking if the no.of fatalities have been decreasing or increasing over the months in different regions
+# Checking if the no.of fatalities have been decreasing or increasing over the months in different regions
 
 
 ```{r}
@@ -1436,7 +1424,7 @@ print(trend_direction)
 
 ```{r data-preparation}
 # Calculate EMS arrival time in minutes using only the minute column
-dataset$ems_arrival_time <- as.numeric(dataset$minute)
+dataset$ems_arrival_time <- as.numeric(dataset$arr_min)
 
 # Check if FATALS column exists and convert it to numeric
 if ("fatals" %in% colnames(dataset)) {
@@ -1551,7 +1539,13 @@ summary(anova_result)
 
 TukeyHSD(anova_result)
 ```
+### **ANOVA Results**: The ANOVA summary indicates that the F-value is 1.01 with a corresponding p-value of 0.39. Since the p-value exceeds the common alpha level of 0.05, we fail to reject the null hypothesis, concluding that there is no statistically significant difference in EMS arrival times across the different severity levels.
 
+### The mean arrival time difference between "Medium (2-3 Fatalities)" and "Low (1 Fatality)" is -0.144, with a confidence interval ranging from -1.11 to 0.821, indicating that the differences are not significant.
+
+### Larger differences are observed when comparing "Very High (6+ Fatalities)" with "Low (1 Fatality)" at -7.659, with a confidence interval from -24.06 to 8.745, again demonstrating no significant difference given the p-value of 0.627.
+
+### ANOVA analysis and subsequent Tukey post-hoc tests reveal that there are no statistically significant differences in EMS arrival times across the various severity levels of fatalities.
 
 ### Logistic Regression Analysis
 
@@ -1588,3 +1582,17 @@ if (correlation_severity$p.value < 0.05) {
   cat("- There is no significant relationship between EMS arrival time and the severity of accidents.\n")
 }
 ```
+
+
+## Key Findings:
+#### Fatal accidents are more frequent between 6 pm and 10 pm and on weekends, with late-night hours linked to increased severity
+#### Clear weather conditions see the highest fatalities, while poorly lit roads (“Dark - Not Lighted”) have elevated risks.
+#### Highways and major arterials report the most fatalities, likely influenced by higher speeds and traffic volume.
+#### EMS response time did not significantly affect fatality severity, suggesting a greater need for preventive measures over emergency response.
+
+## Limitation
+#### Solely focus on accident file, excluding critical behavioral aspects like impaired driving or motorist fatigue
+
+## Further considerations: Cross Factor Analysis
+#### To gain more comprehensive understanding, further analysis should integrate these factors, examining the interactive effect on fatal accidents
+#### investigate the underlying explanation for our analysis result

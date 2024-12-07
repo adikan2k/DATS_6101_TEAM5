@@ -1,0 +1,400 @@
+---
+title: "DATS6101_Midterm_Proj_q1"
+author: "Annie Cheng"
+date: "2024-10-14"
+output: html_document
+---
+```{r}
+library(stringr)
+library(tidyverse)
+library(dplyr)
+library(car)
+library(PMCMRplus)
+library(here)
+```
+
+```{r}
+# load the cleaned data frame
+dataset <- read_csv(here("dataset", "cleaned_FARS.csv"))
+```
+
+# 2. Temporal Analysis (Hour, Day of Week)
+
+Research Question: How do **temporal factors** affect fatal motor vehicle accidents?
+
+- SMART question 1: How do **day of week** and **hour of day** affect the occurrence and severity of fatal accidents?
+
+- SMART question 2: Does **day of week** affect the day to day variation on total fatalities per day?
+
+
+## Data Subsetting and Preparation
+Subset for temporal question
+```{r Q1:Create Temporal Subset}
+# Select columns consists of temporal factors (month, day, day_week, hour) and no of fatalities (fatals)
+df_temporal <- dataset %>% 
+  select("monthname",
+         "day",
+         "day_weekname",
+         "hour",
+         "fatals")
+
+# Create a new column to stored the date
+df_temporal <- df_temporal %>%
+  mutate(
+    date = as.Date(paste("2022", monthname, day, sep = "-"), format = "%Y-%b-%d"),
+    day_type = ifelse(day_weekname %in% c("Saturday", "Sunday"), "Weekend", "Weekday"),
+   fatal_category = ifelse(fatals > 1, "multiple", "one")) 
+
+# convert into factor variable and set up level
+df_temporal$day_weekname <- factor(df_temporal$day_weekname, levels = c("Sunday","Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+df_temporal$hour <- factor(df_temporal$hour)
+
+```
+
+Check if every date in 2022 is included in the data frame, all dates in 2022 are included.
+```{r eval=FALSE, include=FALSE}
+# Generate all dates for the year 2022
+all_dates_2022 <- seq.Date(from = as.Date("2022-01-01"), to = as.Date("2022-12-31"), by = "day")
+
+# Extract unique dates from the accident table
+accident_dates <- unique(df_temporal$date)
+
+# Find dates in 2022 that are missing from the accident table
+missing_dates <- setdiff(all_dates_2022, accident_dates)
+missing_dates # none: all included
+```
+
+Frequency Analysis: Day of Week and Weekday vs Weekend
+This section calculates the frequency of occurrences for each day of the week and categorizes the results into weekdays and weekends. 
+
+**Day of Week Analysis**: Sunday to Friday each has frequency of 52 occurrences, while Saturday has 53. The distribution across the days is balanced.
+
+**Weekday vs Weekend Analysis**: Weekdays have a total of 260 counts, and weekends have 105 counts.
+
+```{r include=FALSE}
+# Calculate for the frequency of day of week in the data frame
+unique_dates <- df_temporal %>%
+  select(date, day_weekname) %>%
+  distinct()
+unique_dates[order(unique_dates$date), ]
+
+# Count the frequency of day of week
+day_of_week_counts <- unique_dates %>%
+  group_by(day_weekname) %>%
+  summarise(count = n())
+day_of_week_counts
+
+# Count the frequency of Weekday and weekend
+weekday_weekend_counts <- day_of_week_counts %>%
+  mutate(category = ifelse(day_weekname %in% c("Saturday", "Sunday"), "Weekend", "Weekday"))
+
+# Summarize the total counts for Weekdays and Weekends
+total_weekday_weekend_counts <- weekday_weekend_counts %>%
+  group_by(category) %>%
+  summarise(total_count = sum(count))
+total_weekday_weekend_counts
+
+```
+
+
+## 2.1 Accident Occurence Analysis
+### Summary Statistics
+#### Hour of Day
+```{r}
+# Filter out unknown hour (hour==99)
+df_hour <- df_temporal %>% 
+  filter(hour != 99) %>% 
+  mutate(hour = droplevels(hour))
+
+df_hour_accidents <- df_hour %>% 
+  group_by(hour) %>% 
+  summarise(total_accidents = n())%>% 
+  ungroup()
+df_hour_accidents
+
+# Top 5 hours with the highest number of fatal accidents
+#head(df_hour_accidents[order(df_hour_accidents$total_accidents, decreasing = TRUE), ], 5)
+# Top 5 hours with the lowest number of fatal accidents
+#head(df_hour_accidents[order(df_hour_accidents$total_accidents), ], 5)
+```
+
+The peak hours for the highest number of accidents occur between 6 PM and 10 PM.
+
+#### Day of Week
+```{r}
+df_wday_accidents <- df_temporal %>% 
+  group_by(day_weekname) %>% 
+  summarise(total_accidents = n())%>% 
+  ungroup()
+df_wday_accidents
+```
+
+Saturday and Sunday appear to have higher count of fatal accidents than rest of days of week.
+ 
+### Data Visualization
+#### Hour of Day
+```{r}
+# Count of Fatal Accidents
+df_hour %>% ggplot(aes(x= hour, fill = as.numeric(as.character(hour)) >= 6 & as.numeric(as.character(hour)) < 18)) +
+  geom_bar()+
+  labs(x = "hour", y = "Number of Fatal Accidents", 
+       title = "Count of Fatal Accidents by Hour",
+       fill = "hour")+
+  scale_fill_manual(values = c("TRUE" = "#E69F00", "FALSE" = "#0072B2"), 
+                    labels = c("Nighttime", "Daytime")) +
+  theme_minimal()
+```
+
+#### Day of Week
+```{r}
+
+df_wday_accidents <- df_wday_accidents %>%
+  mutate(day_type = ifelse(day_weekname %in% c("Saturday", "Sunday"), "Weekend", "Weekday"))
+
+
+# Data Visualization on Occurrence of fatal accidents per day of week
+df_temporal %>% ggplot(aes(x= day_weekname, fill = day_type)) +
+  geom_bar()+
+  labs(x = "Day of the Week", y = "Number of Fatal Accidents", 
+       title = "Frequency of Fatal Accidents by Day of the Week",
+       fill = "Day of Week") +  
+  scale_fill_manual(values = c("#bfbfbf", "#0072B2"), 
+                    labels = c("weekend", "weekday")) +
+  theme_minimal()
+
+```
+
+### Statistical Testing: 
+We use Chi-squared test to determine whether accidents are uniformly distributed across hours of the day/days of week. 
+#### Hour of Day
+```{r Hour of Day}
+# chi-squared test on the occurrence of accident
+table(df_hour$hour)
+chisq_result <- chisq.test(table(df_hour$hour))
+chisq_result
+
+# Get observed and expected counts
+observed <- chisq_result$observed
+expected <- chisq_result$expected
+
+# Calculate standardized residuals
+standardized_residuals <- (observed - expected) / sqrt(expected)
+print(standardized_residuals)
+```
+
+#### Day of Week
+
+In the dataset, six days have 52 occurrences and one has 53. Even though the days are not perfectly equal but the impact will likely be minimal given the small diffference beteen 52 and 53. For simplicity and common assumption, I will be using equal distribution across all seven days in the test. 
+
+```{r : Statistical Testing}
+# chi-squared test on the occurrence of accident
+table(df_temporal$day_weekname)
+
+chi_sq_test <- chisq.test(table(df_temporal$day_weekname))
+print(chi_sq_test)
+
+# Get observed and expected counts
+observed <- chi_sq_test$observed
+expected <- chi_sq_test$expected
+
+# Calculate standardized residuals
+standardized_residuals <- (observed - expected) / sqrt(expected)
+print(standardized_residuals)
+```
+
+P-value for both test are less than 0.05, indicating that there is a statistically significant deviation from a uniform distribution, suggesting that certain hours and days have higher frequencies of accidents compared to others.
+
+# 3. Severity Analysis
+Severity is defined as the number of fatalities per accident. Since the majority of accident has one fatality in an accident and limited occurrence on accidents with fatalities more than four, we will group the number of fatalities into *"one"* and *"multiple"* fatalities.
+
+### Summary Statistics
+#### Hour of Day
+```{r}
+hr_contingency <- table(df_hour$hour, df_hour$fatal_category)
+hr_contingency
+```
+#### Day of Week
+```{r}
+# Severity: categorize accidents into accident with one fatality and multiple
+fatality_counts <- df_temporal %>%
+  group_by(day_weekname, fatal_category) %>%
+  summarize(count = n())
+df_temporal
+
+wday_contingency <- table(df_temporal$day_weekname, df_temporal$fatal_category)
+wday_contingency
+```
+### Data Visualization
+#### Hour of Day
+```{r fig.width=12, fig.height=6}
+# Convert contingency table into data frame and rename column names
+df_hr_contingency <- data.frame(hr_contingency)
+colnames(df_hr_contingency)<- c("hour", "fatal_category", "Freq")
+
+#data viz
+df_hr_contingency %>% 
+  ggplot(aes(x= hour, y = Freq, fill = fatal_category))+
+  geom_bar(stat="identity", alpha = 0.75) +
+  facet_wrap(~ fatal_category, scales = "free_y")+
+  labs(y = "Frequency")
+```
+
+#### Day of Week
+```{r fig.width=8, fig.height=6}
+# Convert contingency table into data frame and rename column names
+df_wday_contingency <- data.frame(wday_contingency)
+colnames(df_wday_contingency)<- c("day_weekname", "fatal_category", "Freq")
+
+# data visualization on Severity by day of week
+df_wday_contingency %>% ggplot(aes(x= day_weekname, y = Freq, fill = fatal_category))+
+  geom_bar(stat="identity", alpha = 0.75) +
+  facet_wrap(~ fatal_category, scales = "free_y")+
+  labs(x = "Day of the Week", y = "Frequency") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+### Statistical Testing
+#### Hour of Day
+```{r}
+# Chi-squared test: hour of day
+chi_sq_result <- chisq.test(hr_contingency)
+print(chi_sq_result)
+
+# standardized residuals table
+# get the expected and observed values
+observed <- chi_sq_result$observed
+expected <- chi_sq_result$expected
+# calculate the standardized residuals
+standardized_residuals <- (observed - expected) / sqrt(expected)
+print(standardized_residuals)
+
+```
+P-value less than 0.05, we can reject the null hypothesis at 5% level of significance. This indicates a significant relationship between the number of fatalities per accident ('one' vs. 'multiple') and the hour of the day. 
+
+#### Day of Week
+```{r}
+chi_sq_test<- chisq.test(wday_contingency)
+print(chi_sq_test)
+
+# Get observed and expected counts
+observed <- chi_sq_test$observed
+expected <- chi_sq_test$expected
+
+# Calculate standardized residuals
+standardized_residuals <- (observed - expected) / sqrt(expected)
+print(standardized_residuals)
+```
+
+The result reveals a clear pattern in the data, highlighting that weekends are associated with more severe accidents involving multiple fatalities. 
+
+
+## Daily Fatalities
+Look further into total fatalities per day to provide a more nuanced undertanding on how does temporal factors affect fatal accidents.
+```{r}
+# Data frame for daily fatalities
+df_daily <- df_temporal %>%
+  group_by(date, day_weekname) %>%
+  summarise(
+    total_accidents = n(),
+    average_fatals = mean(fatals),
+    total_fatals = sum(fatals)
+  ) %>% 
+  ungroup()
+
+
+df_daily <- df_temporal %>%
+  group_by(date, day_weekname) %>%
+  summarise(
+    total_accidents = n(),
+    average_fatals = mean(fatals),
+    total_fatals = sum(fatals)
+  ) %>% 
+  ungroup()
+
+# convert to the right data type
+df_daily$day_weekname <- factor(df_daily$day_weekname, levels =  c("Sunday","Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+
+```
+
+### Top 5 Dates with Highest and Lowest Fatalities
+```{r}
+# Top 5 Highest Daily Fatalities
+head(df_daily[order(df_daily$total_fatals, decreasing = TRUE), ], 5)
+# Top 5 Lowest Daily Fatalities
+tail(df_daily[order(df_daily$total_fatals, decreasing = TRUE), ], 5)
+```
+
+### Data Visualization:Daily fatalities by day of week
+```{r Day of Week: data viz}
+# names of days of week
+df_daily
+
+
+df_daily <- df_daily %>%
+  mutate(day_type = ifelse(day_weekname %in% c("Saturday", "Sunday"), "Weekend", "Weekday"))
+
+
+# Boxplot of daily fatlities by day of week
+df_daily %>% ggplot(aes(x = day_weekname, y = total_fatals, fill = day_type))+
+  geom_boxplot() +
+  labs(x = "Day of the Week", 
+       y = "Daily Fatalities", 
+       title = "Daily Fatalities by Day of the Week")+
+  scale_fill_manual(values = c("#bfbfbf","#0072B2"))
+
+
+```
+
+The boxplot shows that daily fatalities are generally higher on weekends. This suggests that weekends tend to have a higher count of fatalities, potentially due to increased travel.
+
+## Summary Statistics of Day of Week
+```{r avg daily fatalities by day of week}
+ df_summary_day_week <- df_daily %>% 
+  group_by(day_weekname) %>% 
+  summarise(
+    sample_size = n(),
+    avg_fatalities = mean(total_fatals),
+    std_fatalities = sd(total_fatals)) %>% 
+  ungroup()
+
+df_summary_day_week
+```
+
+The average and standard deviation of daily fatalities are notably higher on weekends, indicating both a higher mean and greater variability in fatalities compared to weekdays. The sample size is balanced across groups.
+
+### Check for Normality and Homogeneity of Variance
+```{r}
+# QQ plot
+for(day in unique(df_daily$day_weekname)) {
+  qqnorm(df_daily$total_fatals[df_daily$day_weekname == day], 
+         main = paste("Q-Q Plot for ", day))
+  qqline(df_daily$total_fatals[df_daily$day_weekname == day], col = "blue")
+}
+
+
+# Shapiro: Normality test
+df_daily %>%
+  group_by(day_weekname) %>%
+  summarise(normality_p_value = shapiro.test(total_fatals)$p.value)
+# Levene test: Homogeneiety of Variance
+leveneTest(total_fatals ~ day_weekname, data = df_daily)
+```
+
+Since the number of fatalities per day is relatively large and spans a wide range of values, the daily fatality counts approximate a continuous variable. Combined with sufficiently large sample sizes for each day of the week, the Central Limit Theorem applies, making the sampling distribution of the mean fatalities per day approximately normal. Additionally, normality tests on daily fatalities grouped by day of the week do not reject the assumption of normality. Therefore, we can treat fatalities per day as approximately continuous and appropriately use ANOVA to test for differences across the days of the week
+
+After doing the Leven's test for homogeneity, we can conclude that the variances across the groups are significantly different at 5% level of significance. This indicates that the homogeneity assumption of ANOVA test is violated. So we will be using Welch's ANOVA test in the following section
+
+### Statistical Testing
+```{r Day of Week: ANOVA}
+# Welch's ANOVA
+Wanova_result <- oneway.test(total_fatals ~ day_weekname, data = df_daily, var.equal = FALSE)
+Wanova_result
+# post hoc test-Games Howell
+
+posthoc_result <- gamesHowellTest(total_fatals ~ day_weekname, data = df_daily)
+print(posthoc_result)
+```
+
+p-values <0.05, there is a statistically significant difference (p-value < 0.05) in the number of daily fatalities across different days of the week. This indicates that day of week can affect daily fatality counts.

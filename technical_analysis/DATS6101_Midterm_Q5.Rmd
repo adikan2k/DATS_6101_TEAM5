@@ -1,0 +1,149 @@
+---
+title: "Comprehensive Analysis of EMS Arrival Time Influence on Fatality Severity"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)  
+library(lubridate)  
+library(ggplot2)  
+library(broom)    
+library(gridExtra)    
+```
+
+## 1. Introduction
+This analysis addresses the question:
+- How does the EMS arrival time influence the severity of fatal outcomes?
+
+We will explore how EMS response times correlate with the severity of fatal accidents by categorizing accidents into different severity levels based on the number of fatalities. This analysis will involve descriptive statistics, visual analysis, and advanced statistical testing.
+
+## 2. Data Loading and Preparation
+
+### 2.1 Data Loading
+
+```{r data-loading}
+fars_data <- read.csv("NTAD_Fatality_Analysis_Reporting_System_2022_Accidents_3270373163975898856.csv")
+
+glimpse(fars_data)
+summary(fars_data)
+```
+
+### 2.2 Data Preparation
+EMS Response Time Calculation: Calculating the total EMS arrival time in minutes using `ARR_HOUR` and `ARR_MIN`.
+Conversion of Fatality Count: Ensuring the `FATALS` column is numeric for analysis.
+Categorize Fatality Severity: Creating a new column for severity levels based on the number of fatalities.
+
+```{r data-preparation}
+fars_data$EMS_ARRIVAL_TIME <- (as.numeric(fars_data$ARR_HOUR) * 60) + as.numeric(fars_data$ARR_MIN)
+
+fars_data$FATALS <- as.numeric(fars_data$FATALS)
+
+fars_data$SEVERITY_LEVEL <- cut(
+  fars_data$FATALS,
+  breaks = c(0, 1, 3, 5, Inf),
+  labels = c("Low (1 Fatality)", "Medium (2-3 Fatalities)", "High (4-5 Fatalities)", "Very High (6+ Fatalities)")
+)
+
+glimpse(fars_data[, c("EMS_ARRIVAL_TIME", "FATALS", "SEVERITY_LEVEL")])
+summary(fars_data[, c("EMS_ARRIVAL_TIME", "FATALS", "SEVERITY_LEVEL")])
+```
+
+## 3. Exploratory Data Analysis (EDA)
+
+### Descriptive Statistics
+We will examine basic statistics for EMS arrival times and fatalities, including measures of central tendency and variability.
+
+```{r descriptive-statistics}
+ems_stats <- fars_data %>%
+  summarize(
+    mean_arrival_time = mean(EMS_ARRIVAL_TIME, na.rm = TRUE),
+    median_arrival_time = median(EMS_ARRIVAL_TIME, na.rm = TRUE),
+    sd_arrival_time = sd(EMS_ARRIVAL_TIME, na.rm = TRUE),
+    min_arrival_time = min(EMS_ARRIVAL_TIME, na.rm = TRUE),
+    max_arrival_time = max(EMS_ARRIVAL_TIME, na.rm = TRUE),
+    mean_fatalities = mean(FATALS, na.rm = TRUE),
+    max_fatalities = max(FATALS, na.rm = TRUE)
+  )
+print(ems_stats)
+```
+
+### EMS Arrival Time by Severity Level
+We will compare EMS response times for different severity levels to see if delays correlate with more severe outcomes.
+
+```{r severity-analysis}
+ggplot(fars_data, aes(x=SEVERITY_LEVEL, y=EMS_ARRIVAL_TIME, fill=SEVERITY_LEVEL)) +
+  geom_boxplot(alpha=0.6) +
+  labs(title="EMS Arrival Time by Fatality Severity Level",
+       x="Severity Level",
+       y="EMS Arrival Time (minutes)",
+       fill="Severity Level") +
+  theme_minimal()
+```
+
+###Correlation Analysis of Severity
+We will explore the correlation between EMS arrival times and the severity of accidents.
+
+```{r severity-correlation}
+correlation_severity <- cor.test(fars_data$EMS_ARRIVAL_TIME, fars_data$FATALS, use="complete.obs")
+cat("Correlation between EMS Arrival Time and Severity (Number of Fatalities):\n")
+print(correlation_severity)
+```
+
+### Linear Regression Analysis
+Perform a linear regression to determine if EMS arrival time is a predictor of the number of fatalities.
+
+```{r linear-regression}
+linear_model <- lm(FATALS ~ EMS_ARRIVAL_TIME, data = fars_data)
+summary(linear_model)
+
+ggplot(fars_data, aes(x = EMS_ARRIVAL_TIME, y = FATALS)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = TRUE, color = "blue") +
+  labs(title = "Linear Regression: EMS Arrival Time vs Number of Fatalities",
+       x = "EMS Arrival Time (minutes)",
+       y = "Number of Fatalities") +
+  theme_minimal()
+```
+
+## 4. Advanced Statistical Analysis
+
+### ANOVA for Severity Levels
+We will use an ANOVA test to see if there's a statistically significant difference in EMS arrival times across different severity levels.
+
+```{r anova-analysis}
+anova_result <- aov(EMS_ARRIVAL_TIME ~ SEVERITY_LEVEL, data = fars_data)
+summary(anova_result)
+
+TukeyHSD(anova_result)
+```
+
+### Logistic Regression Analysis
+We will perform logistic regression to see if EMS arrival time influences the probability of a high-severity outcome.
+
+```{r logistic-regression}
+fars_data$HIGH_SEVERITY <- ifelse(fars_data$FATALS > 3, 1, 0)
+
+logistic_model <- glm(HIGH_SEVERITY ~ EMS_ARRIVAL_TIME, data = fars_data, family = binomial)
+summary(logistic_model)
+
+exp(coef(logistic_model))
+```
+
+## 5. Summary and Insights
+
+Based on the analysis, summarize the key observations and their implications for EMS response effectiveness.
+
+```{r summary-findings}
+cat("Summary of Findings:\n")
+if (correlation_severity$p.value < 0.05) {
+  cat("- The analysis indicates a significant relationship between EMS arrival time and the severity of accidents.\n")
+  if (correlation_severity$estimate > 0) {
+    cat("- Longer EMS response times are associated with more severe fatal outcomes.\n")
+  } else {
+    cat("- Shorter EMS response times are associated with less severe fatal outcomes.\n")
+  }
+} else {
+  cat("- There is no significant relationship between EMS arrival time and the severity of accidents.\n")
+}
+```
+
