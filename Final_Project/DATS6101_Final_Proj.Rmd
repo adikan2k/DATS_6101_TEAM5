@@ -214,54 +214,82 @@ library(rnaturalearth)
 library(rnaturalearthdata)
 library(ggplot2)
 library(RColorBrewer)
+library(countrycode)
 
 # Create a mapping table for country codes and names
-country_mapping <- data.frame(
-  code = c("AE", "AR", "AT", "AU", "BE", "BG", "BO", "BR", "BY", "CA", 
-           "CH", "CL", "CO", "CR", "CZ", "DE", "DK", "DO", "EC", "EE", 
-           "EG", "ES", "FI", "FR", "GB", "Global", "GR", "GT", "HK", 
-           "HN", "HU", "ID", "IE", "IL", "IN", "IS", "IT", "JP", "KR", 
-           "KZ", "LT", "LU", "LV", "MA", "MX", "MY", "NG", "NI", "NL", 
-           "NO", "NZ", "PA", "PE", "PH", "PK", "PL", "PT", "PY", "RO", 
-           "SA", "SE", "SG", "SK", "SV", "TH", "TR", "TW", "UA", "UY", 
-           "VE", "VN", "ZA"),
-  name = c("United Arab Emirates", "Argentina", "Austria", "Australia", "Belgium", "Bulgaria","Bolivia", "Brazil", "Belarus", "Canada", "Switzerland", "Chile", "Colombia","Costa Rica", "Czechia", "Germany", "Denmark", "Dominican Republic", "Ecuador", "Estonia", "Egypt", "Spain", "Finland", "France", "United Kingdom", "Global", "Greece", "Guatemala", "Hong Kong", "Honduras", "Hungary", "Indonesia", "Ireland", "Israel", "India", "Iceland", "Italy", "Japan", "South Korea", "Kazakhstan", "Lithuania", "Luxembourg", "Latvia", "Morocco", "Mexico", 
-"Malaysia", "Nigeria", "Nicaragua", "Netherlands", "Norway", "New Zealand","Panama", "Peru", "Philippines", "Pakistan", "Poland", "Portugal", "Paraguay", "Romania", "Saudi Arabia", "Sweden", "Singapore", "Slovakia", "El Salvador", "Thailand", "Turkey", "Taiwan", "Ukraine", "Uruguay", "Venezuela", "Vietnam", "South Africa"))
-
-# Merge country_summary with the mapping table
 country_summary <- country_summary %>%
-  left_join(country_mapping, by = c("country" = "code"))
+  mutate(
+    name = countrycode(country, origin = "iso2c", destination = "country.name")
+  )
 
-# Check the result
-head(country_summary)
-
-# Standardizing country names
-library(countrycode)
-country_summary$country <- countrycode(country_summary$country, 
-                                       origin = "country.name", 
-                                       destination = "country.name")
-
-# Load world map data
 world <- ne_countries(scale = "medium", returnclass = "sf")
 
-# Merge clustering results with world map
+# Merge clustering results with the world map using ISO 2
 world_clusters <- world %>%
-  left_join(country_summary, by = c("name" = "name"))
+  mutate(iso_a2 = countrycode(admin, origin = "country.name", destination = "iso2c")) %>%
+  left_join(country_summary, by = c("iso_a2" = "country"))
 
 # Plot the world map with clusters
 ggplot(data = world_clusters) +
   geom_sf(aes(fill = cluster)) +
   scale_fill_brewer(palette = "Spectral", na.value = "grey80") +
-  labs(title = "Clusters of Countries by Musical Preferences", fill = "Cluster") +
-  theme_minimal()+ 
+  labs(
+    title = "Clusters of Countries by Musical Preferences",
+    fill = "Cluster"
+  ) +
+  theme_minimal() +
   theme(
-    panel.background = element_rect(fill = "lightblue"),  # Add a light blue background
+    panel.background = element_rect(fill = "lightblue"),
     plot.title = element_text(size = 16, face = "bold"),
     legend.title = element_text(size = 12),
     legend.text = element_text(size = 10)
-)
+  )
 ```
 
 #### Summary characteristics for clusters
+
+```{r}
+# Summarize song attributes by cluster
+cluster_summary <- country_summary %>%
+  group_by(cluster) %>%
+  summarize(
+    avg_acousticness = mean(avg_acousticness, na.rm = TRUE),
+    avg_danceability = mean(avg_danceability, na.rm = TRUE),
+    avg_valence = mean(avg_valence, na.rm = TRUE),
+    avg_energy = mean(avg_energy, na.rm = TRUE),
+    avg_loudness = mean(avg_loudness, na.rm = TRUE),
+    avg_instrumentalness = mean(avg_instrumentalness, na.rm = TRUE),
+    avg_tempo = mean(avg_tempo, na.rm = TRUE),
+    avg_liveness = mean(avg_liveness, na.rm = TRUE)
+  )
+print(cluster_summary)
+```
+
+#### Visualizing Attribute Differences across clusters
+
+```{r}
+# Melt data for visualization
+library(reshape2)
+cluster_summary_melted <- melt(cluster_summary, id.vars = "cluster")
+
+# Plot attributes by cluster
+cluster_colors <- RColorBrewer::brewer.pal(n = 5, name = "Spectral")
+ggplot(cluster_summary_melted, aes(x = cluster, y = value, fill = cluster)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_wrap(~variable, scales = "free", ncol = 3) +
+  scale_fill_manual(values = cluster_colors)
+  labs(
+    title = "Comparison of Song Attributes Across Clusters",
+    x = "Cluster",
+    y = "Average Value"
+  ) +
+  theme_minimal()
+```
+  
+#### Top Artists in Each cluster
+
+```{r}
+
+```
 
 
