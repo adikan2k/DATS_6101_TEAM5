@@ -208,6 +208,46 @@ fviz_pca_ind(prcomp(country_data_scaled),
   labs(title = "PCA Plot of Clusters")
 ```
 
+#### Summary characteristics for clusters
+
+```{r}
+# Summarize song attributes by cluster
+cluster_summary <- country_summary %>%
+  group_by(cluster) %>%
+  summarize(
+    avg_acousticness = mean(avg_acousticness, na.rm = TRUE),
+    avg_danceability = mean(avg_danceability, na.rm = TRUE),
+    avg_valence = mean(avg_valence, na.rm = TRUE),
+    avg_energy = mean(avg_energy, na.rm = TRUE),
+    avg_loudness = mean(avg_loudness, na.rm = TRUE),
+    avg_instrumentalness = mean(avg_instrumentalness, na.rm = TRUE),
+    avg_tempo = mean(avg_tempo, na.rm = TRUE),
+    avg_liveness = mean(avg_liveness, na.rm = TRUE)
+  )
+print(cluster_summary, width = Inf)
+```
+
+#### Visualizing Attribute Differences across clusters
+
+```{r}
+# Melt data for visualization
+library(reshape2)
+cluster_summary_melted <- melt(cluster_summary, id.vars = "cluster")
+
+# Plot attributes by cluster
+cluster_colors <- RColorBrewer::brewer.pal(n = 5, name = "Spectral")
+ggplot(cluster_summary_melted, aes(x = cluster, y = value, fill = cluster)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_wrap(~variable, scales = "free", ncol = 3) +
+  scale_fill_manual(values = cluster_colors)
+  labs(
+    title = "Comparison of Song Attributes Across Clusters",
+    x = "Cluster",
+    y = "Average Value"
+  ) +
+  theme_minimal()
+```
+
 ```{r}
 # Load world map and merge with clustering results
 library(rnaturalearth)
@@ -246,50 +286,115 @@ ggplot(data = world_clusters) +
   )
 ```
 
-#### Summary characteristics for clusters
-
-```{r}
-# Summarize song attributes by cluster
-cluster_summary <- country_summary %>%
-  group_by(cluster) %>%
-  summarize(
-    avg_acousticness = mean(avg_acousticness, na.rm = TRUE),
-    avg_danceability = mean(avg_danceability, na.rm = TRUE),
-    avg_valence = mean(avg_valence, na.rm = TRUE),
-    avg_energy = mean(avg_energy, na.rm = TRUE),
-    avg_loudness = mean(avg_loudness, na.rm = TRUE),
-    avg_instrumentalness = mean(avg_instrumentalness, na.rm = TRUE),
-    avg_tempo = mean(avg_tempo, na.rm = TRUE),
-    avg_liveness = mean(avg_liveness, na.rm = TRUE)
-  )
-print(cluster_summary)
-```
-
-#### Visualizing Attribute Differences across clusters
-
-```{r}
-# Melt data for visualization
-library(reshape2)
-cluster_summary_melted <- melt(cluster_summary, id.vars = "cluster")
-
-# Plot attributes by cluster
-cluster_colors <- RColorBrewer::brewer.pal(n = 5, name = "Spectral")
-ggplot(cluster_summary_melted, aes(x = cluster, y = value, fill = cluster)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  facet_wrap(~variable, scales = "free", ncol = 3) +
-  scale_fill_manual(values = cluster_colors)
-  labs(
-    title = "Comparison of Song Attributes Across Clusters",
-    x = "Cluster",
-    y = "Average Value"
-  ) +
-  theme_minimal()
-```
-  
 #### Top Artists in Each cluster
 
 ```{r}
+# Top artists by cluster
+top_artists <- spotify_df %>%
+  left_join(country_summary %>% select(country, cluster), by = "country") %>%
+  group_by(cluster, artists) %>%
+  summarize(
+    avg_popularity = mean(popularity, na.rm = TRUE),
+    song_count = n()
+  ) %>%
+  arrange(cluster, desc(song_count)) %>%
+  group_by(cluster) %>%
+  slice_head(n = 5)
 
+print(top_artists)
+
+# Visualize top artists by cluster
+library(ggplot2)
+
+ggplot(top_artists, aes(x = reorder(artists, -song_count), y = song_count, fill = cluster)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~ cluster, scales = "free", ncol = 2) +
+  scale_fill_manual(values = cluster_colors) +
+  coord_flip() +
+  labs(
+    title = "Top 5 Artists in Each Cluster",
+    x = "Artist",
+    y = "Song Count",
+    fill = "Cluster"
+  ) +
+  theme_minimal()
+
+```
+
+#### How does song popularity vary over time within clusters?
+
+```{r}
+# Aggregate popularity by date and cluster
+popularity_trends <- spotify_df %>%
+  left_join(country_summary %>% select(country, cluster), by = "country") %>%
+  group_by(snapshot_date, cluster) %>%
+  summarize(avg_popularity = mean(popularity, na.rm = TRUE)) %>%
+  ungroup()
+
+# Plot popularity trends over time
+library(ggplot2)
+ggplot(popularity_trends, aes(x = snapshot_date, y = avg_popularity, color = cluster)) +
+  geom_line(size = 1) +
+  scale_fill_manual(values = cluster_colors) + 
+  labs(
+    title = "Popularity Trends Over Time by Cluster",
+    x = "Date",
+    y = "Average Popularity",
+    color = "Cluster"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+# Variability in daily movement by cluster
+rank_stability <- spotify_df %>%
+  left_join(country_summary %>% select(country, cluster), by = "country") %>%
+  group_by(cluster) %>%
+  summarize(
+    avg_daily_movement = mean(abs(daily_movement), na.rm = TRUE),
+    avg_weekly_movement = mean(abs(weekly_movement), na.rm = TRUE)
+  )
+
+# Plot rank stability
+library(reshape2)
+rank_stability_melted <- melt(rank_stability, id.vars = "cluster")
+
+ggplot(rank_stability_melted, aes(x = cluster, y = value, fill = variable)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Rank Stability Across Clusters",
+    x = "Cluster",
+    y = "Average Movement",
+    fill = "Metric"
+  ) +
+  theme_minimal()
+```
+
+
+#### STATISTICAL TESTS
+
+#### One-Way Anova to test if the mean values of each attribute differ significantly across clusters
+
+```{r}
+
+# Attributes
+attributes <- c("avg_loudness", "avg_valence", "avg_danceability",  "avg_instrumentalness", "avg_acousticness", "avg_liveness")
+
+# Loop through attributes and perform ANOVA
+anova_results <- lapply(attributes, function(attr) {
+  # Dynamically create the formula for ANOVA
+  formula <- as.formula(paste(attr, "~ cluster"))
+  # Perform ANOVA
+  anova_res <- aov(formula, data = country_summary)
+  # Return a summary of ANOVA results
+  list(Attribute = attr, ANOVA = summary(anova_res))
+})
+
+# Print the results for each attribute
+for (res in anova_results) {
+  cat("\n\n*** ANOVA Results for", res$Attribute, "***\n")
+  print(res$ANOVA)
+}
 ```
 
 
