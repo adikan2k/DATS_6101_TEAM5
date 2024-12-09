@@ -3,6 +3,8 @@ title: "Final_Project"
 author: "Team 5"
 date: "2024-11-21"
 output:
+  
+  
  html_document:
     code_folding: hide
     number_sections: false
@@ -313,7 +315,9 @@ print(cor_matrix_spearman)
 corrplot::corrplot(cor_matrix_spearman, method = "color", addCoef.col = "black", title = "Spearman Correlation", mar = c(0, 0, 1, 0))
 
 ```
-
+# If we consider factors like loudness, valence, Popularity has weak correlations with all other factors when considered alone.
+# There are factors like loudness and energy which has strong colineratity with each other. there are some attributes with weak correlation.
+# Combining these affects might impact the popularity.
 
 
 
@@ -462,7 +466,7 @@ spotify_data_clean$popularity_factor <- cut(spotify_data_clean$popularity,
 # Split the data
 set.seed(123) # for reproducibility
 train_index <- createDataPartition(spotify_data_clean$popularity_factor, p = 0.8, list = FALSE)
-train_data <- spotify_data_clean[train_index, ]
+train_data <- spotify_dataS_clean[train_index, ]
 test_data <- spotify_data_clean[-train_index, ]
 
 # Check the class distribution in train and test data
@@ -490,9 +494,9 @@ ggplot(data.frame(popularity_factor = train_data$popularity_factor),
 # Balance the classes using SMOTE
 
 # Split data by class
-low_class <- subset(train_data, popularity_factor == "Unpopular")
-medium_class <- subset(train_data, popularity_factor == "Somewhat popular")
-high_class <- subset(train_data, popularity_factor == "Highly popular")
+low_class <- subset(train_data, popularity_factor == "Low")
+medium_class <- subset(train_data, popularity_factor == "Medium")
+high_class <- subset(train_data, popularity_factor == "High")
 
 # Find the maximum class size
 max_samples <- max(nrow(medium_class), nrow(high_class))
@@ -537,6 +541,10 @@ summary(ordinal_model)
 
 # Get odds ratios
 exp(coef(ordinal_model))
+
+
+
+
 ```
 
 ```{r ,echo=TRUE,results='markup'}
@@ -592,7 +600,7 @@ y_test <- test_data$popularity_factor
 library(randomForest)
 
 set.seed(123)  # For reproducibility
-subset_indices <- sample(1:nrow(X_train), size = 100000)  # Adjust size as needed
+subset_indices <- sample(1:nrow(X_train), size = 600000)  # Adjust size as needed
 X_train_subset <- X_train[subset_indices, ]
 y_train_subset <- y_train[subset_indices]
 
@@ -617,16 +625,19 @@ varImpPlot(rf_model, main = "Feature Importance in Random Forest")
 
 ```{r ,echo=TRUE,results='markup'}
 # Make predictions on test data
-rf_predictions <- predict(rf_model, X_test)
+y_pred <- predict(rf_model, X_test)
 ```
 
 
 ```{r ,echo=TRUE,results='markup'}
 # Evaluate the model
 library(caret)
-conf_matrix <- confusionMatrix(factor(rf_predictions), factor(y_test))
+conf_matrix <- confusionMatrix(factor(y_pred), factor(y_test))
 print(conf_matrix)
 
+```
+
+```{r ,echo=TRUE,results='markup'}
 # Extract the class-level metrics
 precision_per_class <- conf_matrix$byClass[, "Pos Pred Value"]
 recall_per_class <- conf_matrix$byClass[, "Sensitivity"]
