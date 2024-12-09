@@ -221,7 +221,7 @@ ggplot(top_songs, aes(x = reorder(name, n), y = n)) +
 ## SMART QUESTION 1: What factors contribute most to a song's popularity over time?
 
 ### Objective: Analyze the relationship between song attributes (danceability, energy, tempo, valence, and loudness) and popularity trends over time.
-
+### Coorelation analysis, linear and logistic regression, random forest regression
 
 
 ### Density plot of popularity
