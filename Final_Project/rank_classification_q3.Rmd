@@ -272,30 +272,7 @@ str(global)
 
 # EDA
 
-```{r}
-music_columns <- c(
-  "danceability", 
-  "energy", "loudness", "speechiness", 
-  "acousticness", "instrumentalness", "liveness",
-  "valence", "tempo")
-
-# Select relevant columns for the pair plot
-df_selected <- global[, num_columns]
-
-
-
-loadPkg("psych") # pair plots with histogram on diagonal and other options
-pairs.panels(df_selected, 
-             method = "spearman", # correlation method
-             hist.col = "#00AFBB",
-             density = FALSE,  # show density plots
-             ellipses = FALSE, # show correlation ellipses,
-             main = "Pair Plot of Musical Features"
-             )
-unloadPkg("psych")
-
-```
-
+## All Numerical Features
 ```{r}
 library(plotly)
 
@@ -331,6 +308,33 @@ for (col in selected_columns) {
 }
 
 ```
+
+## Musical Features
+
+```{r}
+music_columns <- c(
+  "danceability", 
+  "energy", "loudness", "speechiness", 
+  "acousticness", "instrumentalness", "liveness",
+  "valence", "tempo")
+
+# Select relevant columns for the pair plot
+df_selected <- global[, num_columns]
+
+
+
+loadPkg("psych") # pair plots with histogram on diagonal and other options
+pairs.panels(df_selected, 
+             method = "spearman", # correlation method
+             hist.col = "#00AFBB",
+             density = FALSE,  # show density plots
+             ellipses = FALSE, # show correlation ellipses,
+             main = "Pair Plot of Musical Features"
+             )
+unloadPkg("psych")
+
+```
+
 
 
 ```{r fig.width=30, fig.height=20}
@@ -407,11 +411,14 @@ top25Logit0 = glm(top_25 ~1, data = global_cleaned, family = "binomial")
 top25Logit1 = glm(top_25 ~., data = global_cleaned, family = "binomial")
 
 xkabledply(top25Logit1)
+```
 
+```{r include=FALSE}
 # Backward Selection
 step(top25Logit1)
 # only excluding tempo
 ```
+
 
 **Model (Backward Feature Selection)**
 Call:  glm(formula = top_25 ~ daily_movement + weekly_movement + popularity + 
@@ -422,7 +429,7 @@ Call:  glm(formula = top_25 ~ daily_movement + weekly_movement + popularity +
 
 
 ## Forward Selection
-```{r}
+```{r include=FALSE}
 
 step(top25Logit0, scope = list(upper = top25Logit1, lower = top25Logit0), 
     method = "forward")
@@ -451,11 +458,11 @@ top25Logit_final = glm(
 xkablevif(top25Logit_final)
 ```
 
-After checking for VIF, we found out that there are some multicollinearity exist in our model. Therefore, we are global_cleanedping some features.
+After checking the Variance Inflation Factor (VIF), we identified the presence of multicollinearity in our model. To address this, we will remove variables with the highest VIF in a stepwise manner, starting with time_signature, energy, and popularity, to ensure all VIF values are below 10.
 
-Let's drop variables with the highest VIF stepwise, first start with `time signature` , `energy`, and `popularity` to keep VIF all under 10.
 
 ```{r}
+# Model after removing variables > 10
 top25Logit_final = glm(formula = top_25 ~ weekly_movement + daily_movement + 
     danceability + key + speechiness + duration_min + 
     instrumentalness + acousticness + loudness + age + mode + liveness + 
@@ -469,10 +476,12 @@ summary(top25Logit_final)
 xkabledply(top25Logit_final)
 ```
 
-Lets drop the insignificant predictor `valence`.
+According to the summary of logistic regression, we will then drop the insignificant predictor `valence`.
+
 
 ```{r}
 
+# Final Model
 top25Logit_final = glm(
   formula = top_25 ~ weekly_movement + daily_movement + 
     danceability + key + speechiness + duration_min + instrumentalness + 
@@ -485,22 +494,21 @@ summary(top25Logit_final)
 
 
 ```{r fig.width=40, fig.height=8}
+
+# Exponentiate the estimated coefficients of logistic regression
 expcoeff = exp(coef(top25Logit_final))
 # expcoeff
 xkabledply( as.table(expcoeff), title = "Exponential of coefficients in Logit Reg" )
 ```
 
-__Musical Features__
+__Musical Features__<br>
+Notably, we can observe a strong positive relationship between __danceability__ and higher rankings.The odds of being in the Top 25 increase by approximately 750.5%. `key` and `mode1` all have positive impact association with higher rankings. While `speechiness`, `instrumentalness`, `acusticness`, `loudness` and `liveness` has negative association with higher rankings.
 
-Notably, we can observe a strong positive relationship between __danceability__ and higher rankings.The odds of being in the Top 25 increase by approximately 750.5%. `key`, `mode1`, and `duration_min` all have positive impact association with higher rankings.
+__Non Musical Features__<br>
+`duration_min` has positive impact association with higher rankings.  Meanwhile, the exponential coefficient of `is_explicitTRUE` is less than 1 meaning that being an explicit song (TRUE) decreases the odds of being top 25 ranking by 11.38%.
 
-While `speechiness`, `instrumentalness`, `acusticness`, `loudness` and `liveness` has negative association with higher rankings.
-
-And the exponential of the coefficient of `is_explicitTRUE` is less than 1 meaning that being an explicit song (TRUE) decreases the odds of being top 25 ranking by 11.38%.
-
-__Performance Metric__
-
-For other performance metric, we can see that `weekly_movement` and `daily_movement` are positively associated with higher rankings.
+__Performance Metric__<br>
+Among performance metrics, both `weekly_movement` and `daily_movement` are positively associated with higher rankings, suggesting that better movement trends contribute to achieving higher chart positions.
 
 
 ### Final Model Performance ###
@@ -550,16 +558,12 @@ global_cleaned <- global_cleaned[, c(-20, -21)]
 str(global_cleaned)
 ```
 
-          Reference
-Prediction    0    1
-         0 6345 4115
-         1 3479 5715
          
-__Final Remarks on Logistic Regression__
+__Model Evaluation on Logistic Regression__
 
-The model has a moderate accuracy (61.4%) with stronger sensitivity (64.6%) but weaker specificity (58.1%). This imbalance suggests that the model is biased toward predicting class 0.
+The logistic regression model demonstrates moderate accuracy at 61.4%, with stronger sensitivity (64.6%) compared to weaker specificity (58.1%). This imbalance suggests that the model is biased towards predicting class 0.
 
-AUC is 0.677 which is less than 0.8, and McFadden is just 0.0832 which mean only 8.32% variation in target variable is explained by the model. The model does not appear to be a good fit. That's try another modelling technique.
+The AUC is 0.677, which falls below the threshold of 0.8, indicating a relatively low ability to distinguish between classes. Additionally, the McFadden’s R² value is only 0.0832, meaning the model explains just 8.32% of the variation in the target variable. These metrics suggest that the model does not provide a good fit. Therefore, exploring alternative modeling techniques is recommended.
 
 
 ## KNN
@@ -638,7 +642,7 @@ unloadPkg("caret")
 xkabledply(ResultDf, "Total Accuracy Summary")
 ```
 
-K= 2 yield the highest accuracy (0.850). To prevent overfitting, k=3 (0.848) could be a reasonable balance between high accuracy and reduced overfitting risk.
+
 
 ```{r}
 loadPkg("gmodels")
@@ -661,7 +665,7 @@ cmknn$byClass
 unloadPkg("caret")
 ```
 
-The model demonstrates excellent performance with balanced metrics for both classes (Sensitivity, Specificity, and Precision are all approximately 85%).
+
 
 #### Tuning: Cross Validation
 
@@ -695,9 +699,8 @@ cm
 unloadPkg("caret")
 ```
 
-Using cross validation k=3 still has the best performance and consistent having all total accuracy, specificity, sensitivity at around 85%.
 
-
+#### Final Model Evaluation
 ```{r}
 loadPkg("pROC")
 loadPkg("FNN")
@@ -715,8 +718,9 @@ cat("AUC:", auc_value, "\n")
 plot(roc_curve, main = "KNN ROC Curve (Full Model)", col = "blue", lwd = 2)
 ```
 
-AUC (0.913) > 0.8 indicates the model is a good fit.
+__Model Evaluation on KNN (Full Model)__<br>
 
+We started by building a model using all features and employed both a train-test split and cross-validation to tune and validate the performance. For the test set, k=2, achieved the highest accuracy (0.850). However, to balance high accuracy with the risk of overfitting, k=3, achieved the highest accuracy (0.850). However, to balance high accuracy with the risk of overfitting, k=3, consistently delivered the best performance across all metrics, including total accuracy, specificity, and sensitivity, each averaging around 85%. The model demonstrates balanced performance across both classes, with sensitivity, specificity, and precision all near 85%. Additionally, the AUC score of 0.913 (above the 0.8 threshold) confirms that the model is a strong fit for the data.
 
 
 ### Musical Characteristics
@@ -777,7 +781,6 @@ for (kval in 1:15) {
 xkabledply(ResultDf, "Total Accuracy Summary")
 ```
 
-K= 7 yield the highest accuracy (0.747).
 
 #### Tuning: Cross Validation
 ```{r}
@@ -806,10 +809,6 @@ cm
 
 ```
 
-The best model with k =3 demonstrates strong performance with an accuracy of 75.3% and balanced sensitivity (72.6%) and specificity (77.9%). While the model is slightly better at identifying class 1 than class 0, it provides a good overall balance
-
-
-Using cross validation and test set approaches give me different best k, using cross validation knn has the best performance when k=3 and using test set knn has best accuracy when k=7.
 
 ```{r}
 loadPkg("FNN")
@@ -849,5 +848,17 @@ plot(roc_curve, main = "KNN ROC Curve (Musical Characteristics)", col = "blue", 
 
 ```
 
-After checking k=3 on test set, there is a larger discrepancy between specificty and sensitivity. Additionally, the cross-validation total accuracy with k=7 still give us consistent performance at around 0.7472. Therefore, we will choose k=7 as the best model. AUC 0.8136 >0.8
+__Model Evaluation on KNN (Musical Features)__<br>
+
+For the test set, k= 7, yield the highest accuracy (0.747). However, cross-validation identified k=3 as the best model, with an accuracy of 75.3% and balanced sensitivity (72.6%) and specificity (77.9%). While k=3 performed slightly better at identifying class 1 than class 0, it maintained a good overall balance in cross-validation.
+
+When comparing the two approaches, we observed different best values for k. Using k=3 n the test set resulted in a larger discrepancy between specificity and sensitivity, which could indicate reduced robustness. Meanwhile, the cross-validation performance for k=7 demonstrated consistent accuracy (around 0.7472), aligning closely with the test set performance for k=7.
+
+Given this consistency and the stability of metrics, we selected k=7 as the best model. The AUC score of 0.8136 (greater than 0.8) further confirms the model’s effectiveness and suitability.
+
+
+
+__Key Findings and Insights__
+
+Logistic regression reveals that people prefer energetic and danceable music, while niche qualities like live recordings or high speech content have less universal appeal. Comparing k-NN models with all features versus only musical features shows that while musical features are strong predictors, incorporating non-musical factors (e.g., explicit content, duration, age) and performance metrics (e.g., weekly and daily movement) enhances prediction. Overall, k-NN outperforms logistic regression, likely due to its ability to capture non-linear relationships between musical features and rank groups, as observed in the EDA.
 
