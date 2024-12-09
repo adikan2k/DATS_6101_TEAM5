@@ -345,7 +345,10 @@ ggplot(popularity_trends, aes(x = snapshot_date, y = avg_popularity, color = clu
   theme_minimal()
 ```
 
+#### Daily and Weekly Movement Trends
+
 ```{r}
+
 # Variability in daily movement by cluster
 rank_stability <- spotify_df %>%
   left_join(country_summary %>% select(country, cluster), by = "country") %>%
@@ -373,7 +376,7 @@ ggplot(rank_stability_melted, aes(x = cluster, y = value, fill = variable)) +
 
 #### STATISTICAL TESTS
 
-#### One-Way Anova to test if the mean values of each attribute differ significantly across clusters
+#### 1. One-Way Anova to test if the mean values of each attribute differ significantly across clusters
 
 ```{r}
 
@@ -395,6 +398,48 @@ for (res in anova_results) {
   cat("\n\n*** ANOVA Results for", res$Attribute, "***\n")
   print(res$ANOVA)
 }
+```
+
+#### 2. Chi-Square Test of Independence for explicitness across clusters
+
+```{r}
+
+# Prepare data: Ensure `cluster` and `is_explicit` are non-NA and categorical
+explicit_data <- spotify_df %>%
+  left_join(country_summary %>% select(country, cluster), by = "country") %>%
+  filter(!is.na(cluster) & !is.na(is_explicit)) %>%
+  mutate(is_explicit = as.factor(is_explicit))
+
+# Create a contingency table
+explicit_cluster_table <- table(explicit_data$cluster, explicit_data$is_explicit)
+
+# Perform the Chi-Square Test
+chi_square_result <- chisq.test(explicit_cluster_table)
+
+# Output the results
+cat("\n\n*** Chi-Square Test Results ***\n")
+cat("Chi-Square Statistic:", chi_square_result$statistic, "\n")
+cat("p-value:", chi_square_result$p.value, "\n")
+cat("Degrees of Freedom:", chi_square_result$parameter, "\n")
+cat("Expected Frequencies:\n")
+print(chi_square_result$expected)
+
+# Visualize the proportions of explicit content across clusters
+library(ggplot2)
+explicit_data_frame <- as.data.frame(explicit_cluster_table)
+colnames(explicit_data_frame) <- c("Cluster", "Explicit", "Count")
+
+ggplot(explicit_data_frame, aes(x = Cluster, y = Count, fill = Explicit)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Distribution of Explicit Content Across Clusters",
+    x = "Cluster",
+    y = "Count",
+    fill = "Explicit Content"
+  ) +
+  theme_minimal()
+
+
 ```
 
 
