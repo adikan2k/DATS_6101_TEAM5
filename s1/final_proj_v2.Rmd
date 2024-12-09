@@ -240,7 +240,7 @@ library(ggplot2)
 ggplot(spotify_data, aes(x = popularity)) +
   geom_histogram(bins = 30, fill = "blue", color = "black") +
    geom_density(color = "red", size = 1.2)+
-  labs(title = "Distribution of Danceability", x = "popularity", y = "Frequency")
+  labs(title = "Distribution of Popularity", x = "popularity", y = "Frequency")
 
 qqnorm(spotify_data$popularity)
 qqline(spotify_data$popularity, col = "red", lwd = 2)
@@ -464,9 +464,9 @@ spotify_data_clean$popularity_factor <- cut(spotify_data_clean$popularity,
 ```{r ,echo=TRUE,results='markup'}
 
 # Split the data
-set.seed(123) # for reproducibility
+set.seed(123) 
 train_index <- createDataPartition(spotify_data_clean$popularity_factor, p = 0.8, list = FALSE)
-train_data <- spotify_dataS_clean[train_index, ]
+train_data <- spotify_data_clean[train_index, ]
 test_data <- spotify_data_clean[-train_index, ]
 
 # Check the class distribution in train and test data
@@ -542,9 +542,6 @@ summary(ordinal_model)
 # Get odds ratios
 exp(coef(ordinal_model))
 
-
-
-
 ```
 
 ```{r ,echo=TRUE,results='markup'}
@@ -579,28 +576,26 @@ cat("F1-Score:", f1_score, "\n")
 
 ```{r ,echo=TRUE,results='markup'}
 
-# Define predictors and target for training
-
-# Define predictors and target for testing
 selected_features <- c("danceability", "loudness", "energy", 
                        "valence", "acousticness", "speechiness", "liveness")
 
 X_train <- oversampled_train_data[, selected_features]
 y_train <- oversampled_train_data$popularity_factor
 
-# Subset the test dataset with only the selected features
+
 X_test <- test_data[, selected_features]
 y_test <- test_data$popularity_factor
 ```
 
 
 
-## 3. RANDOM FOREST MODEL
+## 3. RANDOM FOREST MODEL (Final model)
+
 ```{r ,echo=TRUE,results='markup'}
 library(randomForest)
 
 set.seed(123)  # For reproducibility
-subset_indices <- sample(1:nrow(X_train), size = 600000)  # Adjust size as needed
+subset_indices <- sample(1:nrow(X_train), size = 500000)  # Adjust size as needed
 X_train_subset <- X_train[subset_indices, ]
 y_train_subset <- y_train[subset_indices]
 
@@ -622,6 +617,7 @@ print(rf_model)
 # Visualize feature importance
 varImpPlot(rf_model, main = "Feature Importance in Random Forest")
 ```
+## PREDICTION
 
 ```{r ,echo=TRUE,results='markup'}
 # Make predictions on test data
@@ -640,6 +636,7 @@ print(conf_matrix)
 
 
 ### EVALUATION METRICES
+
 ```{r ,echo=TRUE,results='markup'}
 # Extract the class-level metrics
 precision_per_class <- conf_matrix$byClass[, "Pos Pred Value"]
@@ -670,3 +667,4 @@ cat("Weighted Precision:", weighted_precision, "\n")
 cat("Weighted Recall:", weighted_recall, "\n")
 cat("Weighted F1-Score:", weighted_f1, "\n")
 ```
+
