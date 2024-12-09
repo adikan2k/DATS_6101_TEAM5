@@ -170,6 +170,7 @@ corrplot::corrplot(cor(df_cleaned[,num_columns], method = "spearman"))
 ```
 
 
+
 3. How does the explicitness of songs impact their popularity?
 
 ```{r}
@@ -272,6 +273,31 @@ str(global)
 # EDA
 
 ```{r}
+music_columns <- c(
+  "danceability", 
+  "energy", "loudness", "speechiness", 
+  "acousticness", "instrumentalness", "liveness",
+  "valence", "tempo")
+
+# Select relevant columns for the pair plot
+df_selected <- global[, num_columns]
+
+
+
+loadPkg("psych") # pair plots with histogram on diagonal and other options
+pairs.panels(df_selected, 
+             method = "spearman", # correlation method
+             hist.col = "#00AFBB",
+             density = FALSE,  # show density plots
+             ellipses = FALSE, # show correlation ellipses,
+             main = "Pair Plot of Musical Features"
+             )
+unloadPkg("psych")
+
+```
+
+```{r}
+library(plotly)
 
 colnames(global)
 
@@ -292,7 +318,7 @@ for (col in selected_columns) {
   # Boxplot
   boxplot <- global %>% ggplot(aes(x = top_25, y=.data[[col]], fill=top_25)) +
   geom_boxplot()
-  print(boxplot)
+  print(ggplotly(boxplot))
 }
 
 top25 <- global %>% filter(top_25 == TRUE)
@@ -303,6 +329,48 @@ for (col in selected_columns) {
   print(paste("T-test result for", col, ":"))
   print(t.test(top25[[col]], top50[[col]]))
 }
+
+```
+
+
+```{r fig.width=30, fig.height=20}
+
+colnames(global)
+
+selected_columns <- c("danceability", 
+  "loudness", "speechiness", 
+  "acousticness", "instrumentalness", "liveness",
+  "valence", "energy", "tempo")
+
+boxplot_list <- list()
+
+for (col in selected_columns) {
+  
+  # Boxplot
+  boxplot <- global %>% ggplot(aes(x = top_25, y = .data[[col]], fill = top_25)) +
+    geom_boxplot() +
+    theme(legend.position = "none")+
+    labs(title = paste("Boxplot of", col))
+  
+  boxplot_list[[col]] <- boxplot
+}
+
+# Combine boxplots into grids
+boxplot_grid <- subplot(boxplot_list, nrows = 3, margin = 0.05, titleX = TRUE, titleY = TRUE)
+
+# Add a title to the grid
+boxplot_grid <- boxplot_grid %>%
+  layout(
+    title = list(
+      text = "Boxplot of Rank Groups vs Musical Features",
+      font = list(size = 16, color = "black", family = "Arial"),
+      x = 0.5,  # Center the title
+      xanchor = "center"
+    )
+  )
+
+
+boxplot_grid
 
 ```
 
@@ -327,7 +395,12 @@ colnames(global)
 
 global_cleaned <- global[, -c(1,2,3,6,7,10,11,12)]
 
-colnames(global_cleaned)
+str(global_cleaned)
+
+# Put target variable `top_25` to the end of columns
+global_cleaned <- global_cleaned[, c(setdiff(names(global_cleaned), "top_25"), "top_25")]
+
+str(global_cleaned)
 
 top25Logit0 = glm(top_25 ~1, data = global_cleaned, family = "binomial")
 # Build model using all x varibles
@@ -449,10 +522,12 @@ summary(SongLogit)
 global_cleaned$predicted <- as.factor(ifelse(SongLogit$fitted.values > 0.5, 1, 0))
 
 # Ensure the reference variable (true labels) is a factor
-global_cleaned$top_25 <- as.factor(ifelse(global_cleaned$top_25==TRUE,1,0))
+global_cleaned$y <- as.factor(ifelse(global_cleaned$top_25==TRUE,1,0))
 
 
-conf_matrix <- confusionMatrix(data = global_cleaned$predicted, reference = global_cleaned$top_25)
+conf_matrix <- confusionMatrix(data = global_cleaned$predicted, 
+                               reference = global_cleaned$y,
+                               positive = "1")
 print(conf_matrix)
 
 prob = predict(SongLogit, type = "response")
@@ -470,11 +545,16 @@ unloadPkg("pscl")
 
 colnames(global_cleaned)
 
-# Drop `predicted` column
-global_cleaned <- global_cleaned[, -20]
+# Drop `predicted` and `y` column
+global_cleaned <- global_cleaned[, c(-20, -21)]
 str(global_cleaned)
 ```
 
+          Reference
+Prediction    0    1
+         0 6345 4115
+         1 3479 5715
+         
 __Final Remarks on Logistic Regression__
 
 The model has a moderate accuracy (61.4%) with stronger sensitivity (64.6%) but weaker specificity (58.1%). This imbalance suggests that the model is biased toward predicting class 0.
@@ -524,13 +604,16 @@ loadPkg("FNN")
 loadPkg("gmodels") # CrossTable
 loadPkg("caret") # confusionMatrix
 ResultDf = NULL
+
+unique(test_y)
+
 for (kval in 1:11) {
   rank_pred <- knn(train = train_X, test = test_X, cl=train_y, k=kval)
   RankCross <- CrossTable(test_y, rank_pred, prop.chisq = FALSE)
   print( paste("k = ", kval) )
   RankCross
   # 
-  cm = confusionMatrix(rank_pred, reference = test_y ) # from caret library
+  cm = confusionMatrix(rank_pred, reference = test_y, positive = "TRUE" ) # from caret library
   # print.confusionMatrix(cm)
   # 
   cmaccu = cm$overall['Accuracy']
@@ -569,7 +652,8 @@ unloadPkg("gmodels")
 
 ```{r}
 loadPkg("caret") 
-cmknn = confusionMatrix(rank_pred_m, reference = test_y )
+cmknn = confusionMatrix(rank_pred_m, reference = test_y, positive = "TRUE")
+cmknn
 print('Overall: ')
 cmknn$overall
 print('Class: ')
@@ -604,27 +688,26 @@ best_model
 
 # Model Evaluation
 predictions <- predict(best_model, test_X,type = "class")
-# Calculate confusion matrix
-cm <- confusionMatrix(predictions, test_y)
-cm
 
+# Calculate confusion matrix
+cm <- confusionMatrix(predictions, test_y, positive = "TRUE")
+cm
+unloadPkg("caret")
 ```
 
-Using cross validation k=3 still has the best performance and consistent having all total accuracy, specificty, sensitivity at around 85%.
+Using cross validation k=3 still has the best performance and consistent having all total accuracy, specificity, sensitivity at around 85%.
 
 
 ```{r}
 loadPkg("pROC")
+loadPkg("FNN")
 
-# Ensure test_y is a factor with two levels (e.g., "0" and "1")
-test_y <- factor(test_y, levels = c("0", "1"))
 
 # Generate probabilities for KNN
 probabilities <- knn(train = train_X, test = test_X, cl = train_y, k = 3, prob = TRUE)
 prob_positive <- attr(probabilities, "prob")
-prob_positive <- ifelse(probabilities == "1", prob_positive, 1 - prob_positive)
+prob_positive <- ifelse(probabilities == "TRUE", prob_positive, 1 - prob_positive)
 
-prob_positive
 # Calculate and plot ROC curve
 roc_curve <- roc(test_y, prob_positive)
 auc_value <- auc(roc_curve)
@@ -673,7 +756,7 @@ for (kval in 1:15) {
   print( paste("k = ", kval) )
   RankCross
   # 
-  cm = confusionMatrix(rank_pred, reference = test_y ) # from caret library
+  cm = confusionMatrix(rank_pred, reference = test_y, positive = "TRUE") # from caret library
   # print.confusionMatrix(cm)
   # 
   cmaccu = cm$overall['Accuracy']
@@ -718,7 +801,7 @@ best_model<- knn3(
 # Model Evaluation
 predictions <- predict(best_model, test_X,type = "class")
 # Calculate confusion matrix
-cm <- confusionMatrix(predictions, test_y)
+cm <- confusionMatrix(predictions, test_y, positive = "TRUE")
 cm
 
 ```
@@ -729,33 +812,42 @@ The best model with k =3 demonstrates strong performance with an accuracy of 75.
 Using cross validation and test set approaches give me different best k, using cross validation knn has the best performance when k=3 and using test set knn has best accuracy when k=7.
 
 ```{r}
+loadPkg("FNN")
 loadPkg("gmodels")
-
 # re-do that one with max accuracy
-rank_pred_m <- knn(train = train_X, test = test_X, cl=train_y, k=3)
+rank_pred_m <- knn(train = train_X, test = test_X, cl=train_y, k=7)
 RankCross_m <- CrossTable(test_y, rank_pred_m, prop.chisq = FALSE)
 unloadPkg("FNN")
 unloadPkg("gmodels")
 ```
 
 ```{r}
-library(pROC)
+loadPkg("caret") 
+cmknn = confusionMatrix(rank_pred_m, reference = test_y, positive = "TRUE")
+cmknn
+print('Overall: ')
+cmknn$overall
+print('Class: ')
+cmknn$byClass
+unloadPkg("caret")
+```
 
-# Ensure test_y is a factor with two levels (e.g., "0" and "1")
-test_y <- factor(test_y, levels = c("0", "1"))
+```{r}
+library(pROC)
+loadPkg("FNN")
 
 # Generate probabilities for KNN
-probabilities <- knn(train = train_X, test = test_X, cl = train_y, k = 3, prob = TRUE)
+probabilities <- knn(train = train_X, test = test_X, cl = train_y, k = 7, prob = TRUE)
 prob_positive <- attr(probabilities, "prob")
-prob_positive <- ifelse(probabilities == "1", prob_positive, 1 - prob_positive)
+prob_positive <- ifelse(probabilities == "TRUE", prob_positive, 1 - prob_positive)
 
-prob_positive
 # Calculate and plot ROC curve
 roc_curve <- roc(test_y, prob_positive)
 auc_value <- auc(roc_curve)
 cat("AUC:", auc_value, "\n")
-plot(roc_curve, main = "KNN ROC Curve", col = "blue", lwd = 2)
+plot(roc_curve, main = "KNN ROC Curve (Musical Characteristics)", col = "blue", lwd = 2)
 
 ```
-AUC 0.844 >0.8
+
+After checking k=3 on test set, there is a larger discrepancy between specificty and sensitivity. Additionally, the cross-validation total accuracy with k=7 still give us consistent performance at around 0.7472. Therefore, we will choose k=7 as the best model. AUC 0.8136 >0.8
 
