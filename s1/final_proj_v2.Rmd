@@ -1,0 +1,669 @@
+---
+title: "Final_Project"
+author: "Team 5"
+date: "2024-11-21"
+output:
+  
+  
+ html_document:
+    code_folding: hide
+    number_sections: false
+    toc: yes
+    toc_float: yes
+---
+
+```{r include=FALSE}
+library(ezids)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+#install.packages("naniar")
+library(naniar)
+library(gridExtra)
+library(car)
+```
+
+
+
+# EDA
+
+## Data Cleaning
+
+### Understand the Dataset
+```{r}
+# Loading the dataset
+top_songs <- read.csv('universal_top_spotify_songs.csv', na.strings = c("", "NA"))
+
+# Print out the first 5 rows of the dataset
+xkabledplyhead(top_songs,title="The first 5 rows of the dataset")
+```
+
+
+```{r include=FALSE}
+str(top_songs)
+```
+
+
+```{r}
+colnames(top_songs)
+```
+
+```{r}
+summary(top_songs)
+```
+
+1. Drop columns which are not useful for modelling and have no meaning on the popularity of a song
+
+2. The minimum value of time signature of a song is 0, which is not possible (Remove rows with time signature = 0).
+
+3. According to the data description, NAs in `country` means Global Top 50. Therefore, we will fill NAs with 'Global'.
+
+4. Since the percentage of observations with NAs is relatively low at 0.046% of the observations; therefore, we will drop all the other observations with NAs.
+
+
+### Drop irrelevant columns
+
+```{r}
+remove_col <- c(1) # Add on columns
+top_songs <- top_songs[, -remove_col]
+```
+
+
+### Handling Missing Values
+
+Visualize the missing values in each column
+```{r}
+gg_miss_var(top_songs)
+```
+
+Calculate the counts and percentage of missing values in each columns
+```{r}
+# Counts the missing values in each column
+colSums(is.na(top_songs))
+
+# Calculate the percentage of missing values in each column
+col_na_percentages <-round(colSums(is.na(top_songs))/dim(top_songs)[1]*100, 3)
+col_na_percentages
+```
+
+
+```{r}
+# Impute the null values in country with 'Global'
+top_songs$country = ifelse(is.na(top_songs$country), 'Global', top_songs$country)
+
+# Drop observations with missing values
+df_cleaned <- na.omit(top_songs)
+
+# Drop observations with 0 time signature
+df_cleaned <- df_cleaned[df_cleaned$time_signature!=0, ]
+```
+
+```{r}
+print("Dimension of Dataset before Cleaning")
+print(dim(top_songs))
+print("Dimension of Dataset after Cleaning")
+dim(df_cleaned)
+```
+
+### Convert Variables into Correct Data Types
+
+```{r include=FALSE}
+str(df_cleaned)
+```
+
+```{r}
+# Convert columns into date data type
+df_cleaned$snapshot_date <- as.Date(df_cleaned$snapshot_date, format = "%Y-%m-%d")
+df_cleaned$album_release_date <- as.Date(df_cleaned$album_release_date, format = "%Y-%m-%d")
+
+# Convert columns into factor data type
+df_cleaned$time_signature <-factor(df_cleaned$time_signature, level= c(1, 3, 4, 5))
+df_cleaned$is_explicit <- factor(as.logical(df_cleaned$is_explicit))
+df_cleaned$mode <- factor(df_cleaned$mode)
+
+str(df_cleaned)
+```
+
+
+```{r}
+summary(df_cleaned)
+```
+
+### Outliers Detection
+
+```{r}
+selected_columns <- c(
+  "popularity", "duration_ms", "danceability", 
+  "energy", "loudness", "speechiness", 
+  "acousticness", "instrumentalness", "liveness",
+  "valence", "tempo")
+
+boxplots_list <- list()
+
+# Create box plots for each selected column
+for (col in selected_columns) {
+  boxplot <- df_cleaned %>% 
+    ggplot(aes(y = .data[[col]])) +
+    geom_boxplot(fill = "lightblue") +
+    labs(title = paste("Box Plot for", col), y = col) +
+    theme_minimal()
+  print(boxplot)
+}
+
+```
+## BASIC EDA
+
+
+```{r ,echo=TRUE,results='markup'}
+spotify_data <- df_cleaned
+str(spotify_data)
+```
+
+
+### Top 10 artists among spotify songs
+
+```{r ,echo=TRUE,results='markup'}
+
+artists_list <- spotify_data %>%
+  select(artists) %>%
+  mutate(artists = strsplit(as.character(artists), ", ")) %>%
+  unnest(artists)
+
+
+artists_count <- artists_list %>%
+  group_by(artists) %>%
+  summarize(frequency = n()) %>%
+  arrange(desc(frequency))
+
+
+top_artists <- artists_count %>%
+  slice_max(frequency, n = 10)
+
+
+ggplot(top_artists, aes(x = reorder(artists, -frequency), y = frequency)) +
+  geom_bar(stat = "identity", fill = "red") +
+  theme_minimal() +
+  labs(title = "Top 10 Most Common Artists Among top spotify songs",
+       x = "Artist",
+       y = "Frequency") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+
+### Songs with most appearances
+```{r ,echo=TRUE,results='markup'}
+top_songs <- spotify_data %>%
+  count(name, sort = TRUE) %>%
+  slice_max(n, n = 10) %>%
+  arrange(n)
+
+# Create the bar chart
+ggplot(top_songs, aes(x = reorder(name, n), y = n)) +
+  geom_bar(stat = "identity", fill = "#1DB954") +  # Spotify green color
+  geom_text(aes(label = n), vjust = -0.5, size = 3) +  # Add labels above bars
+  labs(
+    title = "Songs with Most Appearances",
+    x = "",
+    y = ""
+  ) +
+  theme_minimal() +
+  theme(
+    text = element_text(size = 14),
+    plot.title = element_text(hjust = 0.5, size = 14),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+
+```
+
+## SMART QUESTION 1: What factors contribute most to a song's popularity over time?
+
+### Objective: Analyze the relationship between song attributes (danceability, energy, tempo, valence, and loudness) and popularity trends over time.
+
+
+
+### Density plot of popularity
+```{r ,echo=TRUE,results='markup'}
+ggplot(spotify_data, aes(x = popularity)) +
+  geom_density(fill = "purple", alpha = 0.5) +
+  labs(title = "Density Plot of Popularity", x = "Popularity", y = "Density")
+```
+
+### Distribution of variables- popularity, danceability, energy, loudness, tempo, valence
+
+```{r ,echo=TRUE,results='markup'}
+library(ggplot2)
+
+# Distribution of popularity
+ggplot(spotify_data, aes(x = popularity)) +
+  geom_histogram(bins = 30, fill = "blue", color = "black") +
+   geom_density(color = "red", size = 1.2)+
+  labs(title = "Distribution of Danceability", x = "popularity", y = "Frequency")
+
+qqnorm(spotify_data$popularity)
+qqline(spotify_data$popularity, col = "red", lwd = 2)
+
+# Distribution of danceability
+ggplot(spotify_data, aes(x = danceability)) +
+  geom_histogram(bins = 30, fill = "blue", color = "black") +
+  geom_density(color = "red", size = 1.2)+
+  labs(title = "Distribution of Danceability", x = "danceability", y = "Frequency")
+
+qqnorm(spotify_data$danceability)
+qqline(spotify_data$danceability, col = "red", lwd = 2)
+
+# Distribution of energy
+ggplot(spotify_data, aes(x = energy)) +
+  geom_histogram(bins = 30, fill = "red", color = "black") +
+  geom_density(color = "green", size = 1.2)+
+  labs(title = "Distribution of energy", x = "energy", y = "Frequency")
+
+qqnorm(spotify_data$energy)
+qqline(spotify_data$energy, col = "red", lwd = 2)
+
+
+# Distribution of tempo
+ggplot(spotify_data, aes(x = tempo)) +
+  geom_histogram(bins = 30, fill = "green", color = "black") +
+  geom_density(color = "red", size = 1.2)+
+  labs(title = "Distribution of tempo", x = "tempo", y = "Frequency")
+
+qqnorm(spotify_data$tempo)
+qqline(spotify_data$tempo, col = "red", lwd = 2)
+
+# Distribution of valence
+
+ggplot(spotify_data, aes(x = valence)) +
+  geom_histogram(bins = 30, fill = "yellow", color = "black") +
+  geom_density(color = "red", size = 1.2)+
+  labs(title = "Distribution of valence", x = "valence", y = "Frequency")
+
+qqnorm(spotify_data$valence)
+qqline(spotify_data$valence, col = "red", lwd = 2)
+
+# Distribution of loudness
+
+ggplot(spotify_data, aes(x = loudness)) +
+  geom_histogram(bins = 30, fill = "lightblue", color = "black") +
+  geom_density(color = "red", size = 1.2)+
+  labs(title = "Distribution of loudness", x = "loudness", y = "Frequency")
+
+qqnorm(spotify_data$loudness)
+qqline(spotify_data$loudness, col = "red", lwd = 2)
+
+
+```
+
+
+
+## Not following normal distribution
+## Hence let us use 
+## Spearman coef technique
+
+```{r ,echo=TRUE,results='markup'}
+spotify_num <- spotify_data %>%
+  select(popularity, danceability, energy, tempo, valence, loudness)
+
+# Calculate Spearman's rank correlation
+cor_matrix_spearman <- cor(spotify_num, use = "complete.obs", method = "spearman")
+print("Spearman Correlation Matrix:")
+print(cor_matrix_spearman)
+
+# Visualize Spearman correlation
+corrplot::corrplot(cor_matrix_spearman, method = "color", addCoef.col = "black", title = "Spearman Correlation", mar = c(0, 0, 1, 0))
+
+```
+# If we consider factors like loudness, valence, Popularity has weak correlations with all other factors when considered alone.
+# There are factors like loudness and energy which has strong colineratity with each other. there are some attributes with weak correlation.
+# Combining these affects might impact the popularity.
+
+
+
+### Regression Problem
+
+## Interactive models
+
+```{r ,echo=TRUE,results='markup'}
+interaction_model1 <- lm(popularity ~ loudness * danceability + liveness * acousticness + speechiness *energy , data = spotify_data)
+summary(interaction_model1)
+vif(interaction_model1, type = "predictor")
+```
+
+```{r ,echo=TRUE,results='markup'}
+interaction_model2 <- lm(popularity ~ loudness * danceability + energy, data = spotify_data)
+summary(interaction_model2)
+vif(interaction_model2, type = "predictor")
+```
+
+```{r ,echo=TRUE,results='markup'}
+interaction_model3 <- lm(popularity ~ loudness + danceability * energy, data = spotify_data)
+summary(interaction_model3)
+vif(interaction_model3, type = "predictor")
+```
+
+### Comparing different models
+
+```{r ,echo=TRUE,results='markup'}
+anova_results2 <- anova(interaction_model1, interaction_model2, interaction_model3)
+print(anova_results2)
+```
+
+
+## Proceeding with interactive_model1
+### Checking for non-linearity in our best model so far
+
+```{r ,echo=TRUE,results='markup'}
+residuals <- residuals(interaction_model1)
+```
+
+```{r ,echo=TRUE,results='markup'}
+ggplot(data.frame(residuals), aes(x = residuals)) +
+  geom_histogram(aes(y = ..density..), bins = 30, fill = "blue", color = "black") +
+  geom_density(color = "red", size = 1.2) +
+  labs(title = "Histogram of Residuals", x = "Residuals", y = "Density")
+```
+
+```{r ,echo=TRUE,results='markup'}
+qqnorm(residuals)
+qqline(residuals, col = "red", lwd = 2)
+```
+
+```{r ,echo=TRUE,results='markup'}
+plot(fitted(interaction_model1), residuals,
+     main = "Residuals vs Fitted Values",
+     xlab = "Fitted Values",
+     ylab = "Residuals")
+abline(h = 0, col = "red", lwd = 2)
+```
+
+# The histogram of residuals shows skewness, indicating potential non-normality.
+# The Q-Q plot reveals deviations from the normality assumption at both ends.
+# There's evidence of heteroscedasticity (non-constant variance of residuals), as the spread of residuals increases with fitted values.
+## None of the variables appear strictly normally distributed based on the
+
+## Need to address the above potential concerns
+
+### Cooks distance
+```{r ,echo=TRUE,results='markup'}
+cooks_dist <- cooks.distance(interaction_model1)
+influential_points <- which(cooks_dist > (4 / nrow(spotify_data)))
+spotify_data_clean <- spotify_data[-influential_points, ]
+
+```
+
+
+### Square root transformation
+```{r ,echo=TRUE,results='markup'}
+spotify_data_clean$loudness_scaled <- scale(spotify_data_clean$loudness)
+spotify_data_clean$sqrt_energy <- sqrt(spotify_data_clean$energy)
+spotify_data_clean$log_popularity <- log(spotify_data_clean$popularity + 1)
+spotify_data_clean$log_liveness <- log(spotify_data_clean$liveness + 1)
+spotify_data_clean$log_speechiness <- log(spotify_data_clean$speechiness + 1)
+
+transformed_model2 <- lm(log_popularity ~ loudness_scaled*danceability + energy*valence + log_liveness * acousticness + log_speechiness, data = spotify_data_clean)
+
+summary(transformed_model2)
+vif(transformed_model2, type = 'predictor')
+
+
+```
+
+
+
+### plotting residuals vs fitted for new model
+```{r ,echo=TRUE,results='markup'}
+plot(fitted(transformed_model2), residuals(transformed_model2),
+     main = "Residuals vs Fitted",
+     xlab = "Fitted Values",
+     ylab = "Residuals")
+abline(h = 0, col = "red")
+
+```
+
+
+```{r ,echo=TRUE,results='markup'}
+residuals <- residuals(transformed_model2)
+```
+
+```{r ,echo=TRUE,results='markup'}
+ggplot(data.frame(residuals), aes(x = residuals)) +
+  geom_histogram(aes(y = ..density..), bins = 30, fill = "blue", color = "black") +
+  geom_density(color = "red", size = 1.2) +
+  labs(title = "Histogram of Residuals", x = "Residuals", y = "Density")
+```
+
+```{r ,echo=TRUE,results='markup'}
+qqnorm(residuals)
+qqline(residuals, col = "red", lwd = 2)
+```
+
+
+```{r ,echo=TRUE,results='markup'}
+library(mgcv)
+library(caret)
+library(dplyr)
+library(MASS)  # For polr
+library(brant) # For Brant test
+library(ggplot2)
+library(smotefamily)
+```
+
+
+
+```{r ,echo=TRUE,results='markup'}
+# Convert popularity to an ordinal factor
+spotify_data_clean$popularity_factor <- cut(spotify_data_clean$popularity,
+                                            breaks = c(-Inf, 33, 66, Inf),
+                                            labels = c("Low", "Medium", "High"),
+                                            ordered_result = TRUE)
+```
+
+
+```{r ,echo=TRUE,results='markup'}
+
+# Split the data
+set.seed(123) # for reproducibility
+train_index <- createDataPartition(spotify_data_clean$popularity_factor, p = 0.8, list = FALSE)
+train_data <- spotify_dataS_clean[train_index, ]
+test_data <- spotify_data_clean[-train_index, ]
+
+# Check the class distribution in train and test data
+table(train_data$popularity_factor)
+table(test_data$popularity_factor)
+```
+
+
+
+```{r ,echo=TRUE,results='markup'}
+# Check class distribution
+table(train_data$popularity_factor)
+
+# Visualize class distribution
+library(ggplot2)
+ggplot(data.frame(popularity_factor = train_data$popularity_factor), 
+       aes(x = popularity_factor)) +
+  geom_bar(fill = "skyblue") +
+  labs(title = "Class Distribution of Popularity", x = "Popularity Category", y = "Count")
+
+```
+
+```{r ,echo=TRUE,results='markup'}
+# use smote as classes are imbalanced- very negligivble values for low category
+# Balance the classes using SMOTE
+
+# Split data by class
+low_class <- subset(train_data, popularity_factor == "Low")
+medium_class <- subset(train_data, popularity_factor == "Medium")
+high_class <- subset(train_data, popularity_factor == "High")
+
+# Find the maximum class size
+max_samples <- max(nrow(medium_class), nrow(high_class))
+
+# Randomly oversample minority classes to match the majority class size
+set.seed(123)  # For reproducibility
+low_class <- low_class[sample(nrow(low_class), max_samples, replace = TRUE), ]
+medium_class <- medium_class[sample(nrow(medium_class), max_samples, replace = TRUE), ]
+
+# Combine all classes to create the balanced dataset
+oversampled_train_data <- rbind(low_class, medium_class, high_class)
+
+table(oversampled_train_data$popularity_factor)
+
+ggplot(data.frame(popularity_factor = oversampled_train_data$popularity_factor), 
+       aes(x = popularity_factor)) +
+  geom_bar(fill = "skyblue") +
+  labs(title = "Class Distribution After Oversampling", 
+       x = "Popularity Category", 
+       y = "Count")
+
+
+```
+
+# 2. Ordinal logistic regression model
+
+```{r ,echo=TRUE,results='markup'}
+# Install and load the MASS package
+library(MASS)
+
+oversampled_train_data$loudness_scaled <- scale(oversampled_train_data$loudness)
+oversampled_train_data$sqrt_energy <- sqrt(oversampled_train_data$energy)
+oversampled_train_data$log_popularity <- log(oversampled_train_data$popularity + 1)
+oversampled_train_data$log_liveness <- log(oversampled_train_data$liveness + 1)
+oversampled_train_data$log_speechiness <- log(oversampled_train_data$speechiness + 1)
+
+
+ordinal_model <- polr(popularity_factor ~ loudness_scaled*danceability + energy*valence + log_liveness + log_speechiness, data = oversampled_train_data, Hess = TRUE)
+
+# Model summary
+summary(ordinal_model)
+
+# Get odds ratios
+exp(coef(ordinal_model))
+
+
+
+
+```
+
+```{r ,echo=TRUE,results='markup'}
+# Install and load the brant package
+library(brant)
+# Perform the Brant test
+brant(ordinal_model)
+
+```
+
+```{r ,echo=TRUE,results='markup'}
+# Make predictions on test data
+predicted_classes <- predict(ordinal_model, newdata = test_data, type = "class")
+
+# Confusion Matrix
+confusionMatrix <- table(Predicted = predicted_classes, Actual = test_data$popularity_factor)
+confusionMatrix
+
+# Accuracy
+accuracy <- sum(diag(confusionMatrix)) / sum(confusionMatrix)
+cat("Accuracy:", accuracy, "\n")
+
+# Precision, Recall, and F1-Score (for each class)
+precision <- diag(confusionMatrix) / colSums(confusionMatrix)
+recall <- diag(confusionMatrix) / rowSums(confusionMatrix)
+f1_score <- 2 * (precision * recall) / (precision + recall)
+
+cat("Precision:", precision, "\n")
+cat("Recall:", recall, "\n")
+cat("F1-Score:", f1_score, "\n")
+```
+
+```{r ,echo=TRUE,results='markup'}
+
+# Define predictors and target for training
+
+# Define predictors and target for testing
+selected_features <- c("danceability", "loudness", "energy", 
+                       "valence", "acousticness", "speechiness", "liveness")
+
+X_train <- oversampled_train_data[, selected_features]
+y_train <- oversampled_train_data$popularity_factor
+
+# Subset the test dataset with only the selected features
+X_test <- test_data[, selected_features]
+y_test <- test_data$popularity_factor
+```
+
+
+
+## 3. RANDOM FOREST MODEL
+```{r ,echo=TRUE,results='markup'}
+library(randomForest)
+
+set.seed(123)  # For reproducibility
+subset_indices <- sample(1:nrow(X_train), size = 600000)  # Adjust size as needed
+X_train_subset <- X_train[subset_indices, ]
+y_train_subset <- y_train[subset_indices]
+
+# Train the Random Forest on the subset
+rf_model <- randomForest(
+  x = X_train_subset,
+  y = y_train_subset,
+  ntree = 500,
+  mtry = sqrt(ncol(X_train_subset)),
+  importance = TRUE
+)
+
+print(rf_model)
+
+```
+
+### FEATURE IMPORTANCE
+```{r ,echo=TRUE,results='markup'}
+# Visualize feature importance
+varImpPlot(rf_model, main = "Feature Importance in Random Forest")
+```
+
+```{r ,echo=TRUE,results='markup'}
+# Make predictions on test data
+y_pred <- predict(rf_model, X_test)
+```
+
+
+```{r ,echo=TRUE,results='markup'}
+# Evaluate the model
+library(caret)
+conf_matrix <- confusionMatrix(factor(y_pred), factor(y_test))
+print(conf_matrix)
+
+```
+
+```{r ,echo=TRUE,results='markup'}
+# Extract the class-level metrics
+precision_per_class <- conf_matrix$byClass[, "Pos Pred Value"]
+recall_per_class <- conf_matrix$byClass[, "Sensitivity"]
+
+# Handle potential NAs in metrics (in case of missing classes in predictions)
+precision_per_class[is.na(precision_per_class)] <- 0
+recall_per_class[is.na(recall_per_class)] <- 0
+
+# Compute F1-Score for each class
+f1_per_class <- 2 * ((precision_per_class * recall_per_class) / 
+                     (precision_per_class + recall_per_class))
+f1_per_class[is.na(f1_per_class)] <- 0  # Handle NaNs in F1-Score
+
+# Compute class proportions in the test set
+class_counts <- table(y_test)
+total_counts <- sum(class_counts)
+class_weights <- class_counts / total_counts
+
+# Compute weighted averages
+weighted_precision <- sum(precision_per_class * class_weights)
+weighted_recall <- sum(recall_per_class * class_weights)
+weighted_f1 <- sum(f1_per_class * class_weights)
+
+# Print metrics
+cat("Accuracy:", conf_matrix$overall['Accuracy'], "\n")
+cat("Weighted Precision:", weighted_precision, "\n")
+cat("Weighted Recall:", weighted_recall, "\n")
+cat("Weighted F1-Score:", weighted_f1, "\n")
+```
