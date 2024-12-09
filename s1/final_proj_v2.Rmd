@@ -628,6 +628,7 @@ varImpPlot(rf_model, main = "Feature Importance in Random Forest")
 y_pred <- predict(rf_model, X_test)
 ```
 
+### CONFUSION MATRIX
 
 ```{r ,echo=TRUE,results='markup'}
 # Evaluate the model
@@ -637,6 +638,8 @@ print(conf_matrix)
 
 ```
 
+
+### EVALUATION METRICES
 ```{r ,echo=TRUE,results='markup'}
 # Extract the class-level metrics
 precision_per_class <- conf_matrix$byClass[, "Pos Pred Value"]
