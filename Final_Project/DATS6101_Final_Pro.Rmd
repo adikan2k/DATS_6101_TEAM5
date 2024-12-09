@@ -1281,3 +1281,342 @@ __Key Findings and Insights__
 
 Logistic regression reveals that people prefer energetic and danceable music, while niche qualities like live recordings or high speech content have less universal appeal. Comparing k-NN models with all features versus only musical features shows that while musical features are strong predictors, incorporating non-musical factors (e.g., explicit content, duration, age) and performance metrics (e.g., weekly and daily movement) enhances prediction. Overall, k-NN outperforms logistic regression, likely due to its ability to capture non-linear relationships between musical features and rank groups, as observed in the EDA.
 
+
+### 3. How do musical preferences (song attributes or artists) vary across countries and regions?
+
+#### 3.1 Data Preparation for Clustering 
+
+```{r}
+
+spotify_df <- df_cleaned
+
+# Summarize attributes by country
+country_summary <- spotify_df %>%
+  group_by(country) %>%
+  summarize(
+    avg_acousticness = mean(acousticness, na.rm = TRUE),
+    avg_danceability = mean(danceability, na.rm = TRUE),
+    avg_valence = mean(valence, na.rm = TRUE),
+    avg_energy = mean(energy, na.rm = TRUE),
+    avg_loudness = mean(loudness, na.rm = TRUE),
+    avg_instrumentalness = mean(instrumentalness, na.rm = TRUE),
+    avg_tempo = mean(tempo, na.rm = TRUE),
+    avg_liveness = mean(liveness, na.rm = TRUE)
+  )
+
+country_data_scaled <- scale(country_summary %>% select(-country))
+
+```
+
+#### K-Means Clustering
+
+```{r}
+library(factoextra)
+
+# Elbow method to find optimal number of clusters
+fviz_nbclust(country_data_scaled, kmeans, method = "wss") +
+  labs(title = "Elbow Method for Optimal Clusters")
+
+# Set optimal number of clusters
+set.seed(123)
+k_optimal <- 5  # Change this to 4 if you'd like to explore fewer clusters
+kmeans_result <- kmeans(country_data_scaled, centers = k_optimal)
+
+# Add cluster labels to the original dataset
+country_summary$cluster <- as.factor(kmeans_result$cluster)
+
+```
+
+#### PCA Plot
+
+```{r}
+# Perform PCA
+pca_result <- prcomp(country_data_scaled, center = TRUE, scale. = TRUE)
+
+# Calculate variance explained
+variance_explained <- summary(pca_result)$importance[2, ]
+cumulative_variance <- cumsum(variance_explained)
+
+# Identify the number of PCs to explain > 70% variance
+pcs_needed <- which(cumulative_variance >= 0.7)[1]
+
+cat("Number of PCs explaining > 70% variance:", pcs_needed, "\n")
+
+# Create a cumulative variance plot
+library(ggplot2)
+variance_df <- data.frame(
+  PC = 1:length(cumulative_variance),
+  Variance = cumulative_variance
+)
+
+ggplot(variance_df, aes(x = PC, y = Variance)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 0.7, linetype = "dashed", color = "red") +
+  labs(
+    title = "Cumulative Variance Explained by Principal Components",
+    x = "Principal Components",
+    y = "Cumulative Variance Explained"
+  ) +
+  theme_minimal()
+
+# Create a 3D PCA plot with the top PCs
+library(plotly)
+
+pca_top_df <- as.data.frame(pca_result$x[, 1:pcs_needed]) # Include PCs explaining > 70% variance
+pca_top_df$cluster <- country_summary$cluster
+
+plot_ly(
+  data = pca_top_df,
+  x = ~PC1,
+  y = ~PC2,
+  z = ~PC3,
+  color = ~cluster,
+  colors = "Spectral",
+  type = "scatter3d",
+  mode = "markers"
+) %>%
+  layout(
+    title = paste("3D PCA Plot: PCs Explaining", round(cumulative_variance[pcs_needed] * 100, 2), "% Variance"),
+    scene = list(
+      xaxis = list(title = "Principal Component 1"),
+      yaxis = list(title = "Principal Component 2"),
+      zaxis = list(title = "Principal Component 3")
+    )
+  )
+
+```
+
+#### Summary characteristics for clusters
+
+```{r}
+# Summarize song attributes by cluster
+cluster_summary <- country_summary %>%
+  group_by(cluster) %>%
+  summarize(
+    avg_acousticness = mean(avg_acousticness, na.rm = TRUE),
+    avg_danceability = mean(avg_danceability, na.rm = TRUE),
+    avg_valence = mean(avg_valence, na.rm = TRUE),
+    avg_energy = mean(avg_energy, na.rm = TRUE),
+    avg_loudness = mean(avg_loudness, na.rm = TRUE),
+    avg_instrumentalness = mean(avg_instrumentalness, na.rm = TRUE),
+    avg_tempo = mean(avg_tempo, na.rm = TRUE),
+    avg_liveness = mean(avg_liveness, na.rm = TRUE)
+  )
+print(cluster_summary, width = Inf)
+```
+
+#### Visualizing Attribute Differences across clusters
+
+```{r}
+# Melt data for visualization
+library(reshape2)
+cluster_summary_melted <- melt(cluster_summary, id.vars = "cluster")
+
+# Plot attributes by cluster
+cluster_colors <- RColorBrewer::brewer.pal(n = 5, name = "Spectral")
+ggplot(cluster_summary_melted, aes(x = cluster, y = value, fill = cluster)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_wrap(~variable, scales = "free", ncol = 3) +
+  scale_fill_manual(values = cluster_colors)
+  labs(
+    title = "Comparison of Song Attributes Across Clusters",
+    x = "Cluster",
+    y = "Average Value"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+# Load world map and merge with clustering results
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(ggplot2)
+library(RColorBrewer)
+library(countrycode)
+
+# Create a mapping table for country codes and names
+country_summary <- country_summary %>%
+  mutate(
+    name = countrycode(country, origin = "iso2c", destination = "country.name")
+  )
+
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+# Merge clustering results with the world map using ISO 2
+world_clusters <- world %>%
+  mutate(iso_a2 = countrycode(admin, origin = "country.name", destination = "iso2c")) %>%
+  left_join(country_summary, by = c("iso_a2" = "country"))
+
+# Plot the world map with clusters
+ggplot(data = world_clusters) +
+  geom_sf(aes(fill = cluster)) +
+  scale_fill_brewer(palette = "Spectral", na.value = "grey80") +
+  labs(
+    title = "Clusters of Countries by Musical Preferences",
+    fill = "Cluster"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.background = element_rect(fill = "lightblue"),
+    plot.title = element_text(size = 16, face = "bold"),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10)
+  )
+```
+
+#### Top Artists in Each cluster
+
+```{r}
+# Top artists by cluster
+top_artists <- spotify_df %>%
+  left_join(country_summary %>% select(country, cluster), by = "country") %>%
+  group_by(cluster, artists) %>%
+  summarize(
+    avg_popularity = mean(popularity, na.rm = TRUE),
+    song_count = n()
+  ) %>%
+  arrange(cluster, desc(song_count)) %>%
+  group_by(cluster) %>%
+  slice_head(n = 5)
+
+print(top_artists)
+
+# Visualize top artists by cluster
+library(ggplot2)
+
+ggplot(top_artists, aes(x = reorder(artists, -song_count), y = song_count, fill = cluster)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~ cluster, scales = "free", ncol = 2) +
+  scale_fill_manual(values = cluster_colors) +
+  coord_flip() +
+  labs(
+    title = "Top 5 Artists in Each Cluster",
+    x = "Artist",
+    y = "Song Count",
+    fill = "Cluster"
+  ) +
+  theme_minimal()
+
+```
+
+#### How does song popularity vary over time within clusters?
+
+```{r}
+# Aggregate popularity by date and cluster
+popularity_trends <- spotify_df %>%
+  left_join(country_summary %>% select(country, cluster), by = "country") %>%
+  group_by(snapshot_date, cluster) %>%
+  summarize(avg_popularity = mean(popularity, na.rm = TRUE)) %>%
+  ungroup()
+
+# Plot popularity trends over time
+library(ggplot2)
+ggplot(popularity_trends, aes(x = snapshot_date, y = avg_popularity, color = cluster)) +
+  geom_line(size = 1) +
+  scale_fill_manual(values = cluster_colors) + 
+  labs(
+    title = "Popularity Trends Over Time by Cluster",
+    x = "Date",
+    y = "Average Popularity",
+    color = "Cluster"
+  ) +
+  theme_minimal()
+```
+
+#### Daily and Weekly Movement Trends
+
+```{r}
+
+# Variability in daily movement by cluster
+rank_stability <- spotify_df %>%
+  left_join(country_summary %>% select(country, cluster), by = "country") %>%
+  group_by(cluster) %>%
+  summarize(
+    avg_daily_movement = mean(abs(daily_movement), na.rm = TRUE),
+    avg_weekly_movement = mean(abs(weekly_movement), na.rm = TRUE)
+  )
+
+# Plot rank stability
+library(reshape2)
+rank_stability_melted <- melt(rank_stability, id.vars = "cluster")
+
+ggplot(rank_stability_melted, aes(x = cluster, y = value, fill = variable)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Rank Stability Across Clusters",
+    x = "Cluster",
+    y = "Average Movement",
+    fill = "Metric"
+  ) +
+  theme_minimal()
+```
+
+
+#### STATISTICAL TESTS
+
+#### 1. One-Way Anova to test if the mean values of each attribute differ significantly across clusters
+
+```{r}
+
+# Attributes
+attributes <- c("avg_loudness", "avg_tempo", "avg_valence", "avg_danceability",  "avg_instrumentalness", "avg_acousticness", "avg_liveness")
+
+# Loop through attributes and perform ANOVA
+anova_results <- lapply(attributes, function(attr) {
+  # Dynamically create the formula for ANOVA
+  formula <- as.formula(paste(attr, "~ cluster"))
+  # Perform ANOVA
+  anova_res <- aov(formula, data = country_summary)
+  # Return a summary of ANOVA results
+  list(Attribute = attr, ANOVA = summary(anova_res))
+})
+
+# Print the results for each attribute
+for (res in anova_results) {
+  cat("\n\n*** ANOVA Results for", res$Attribute, "***\n")
+  print(res$ANOVA)
+}
+```
+
+#### 2. Chi-Square Test of Independence for explicitness across clusters
+
+```{r}
+
+# Prepare data: Ensure `cluster` and `is_explicit` are non-NA and categorical
+explicit_data <- spotify_df %>%
+  left_join(country_summary %>% select(country, cluster), by = "country") %>%
+  filter(!is.na(cluster) & !is.na(is_explicit)) %>%
+  mutate(is_explicit = as.factor(is_explicit))
+
+# Create a contingency table
+explicit_cluster_table <- table(explicit_data$cluster, explicit_data$is_explicit)
+
+# Perform the Chi-Square Test
+chi_square_result <- chisq.test(explicit_cluster_table)
+
+# Output the results
+cat("\n\n*** Chi-Square Test Results ***\n")
+cat("Chi-Square Statistic:", chi_square_result$statistic, "\n")
+cat("p-value:", chi_square_result$p.value, "\n")
+cat("Degrees of Freedom:", chi_square_result$parameter, "\n")
+cat("Expected Frequencies:\n")
+print(chi_square_result$expected)
+
+# Visualize the proportions of explicit content across clusters
+library(ggplot2)
+explicit_data_frame <- as.data.frame(explicit_cluster_table)
+colnames(explicit_data_frame) <- c("Cluster", "Explicit", "Count")
+
+ggplot(explicit_data_frame, aes(x = Cluster, y = Count, fill = Explicit)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Distribution of Explicit Content Across Clusters",
+    x = "Cluster",
+    y = "Count",
+    fill = "Explicit Content"
+  ) +
+  theme_minimal()
+
+
+```
