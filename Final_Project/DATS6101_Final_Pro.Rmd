@@ -1277,7 +1277,6 @@ When comparing the two approaches, we observed different best values for k. Usin
 Given this consistency and the stability of metrics, we selected k=7 as the best model. The AUC score of 0.8136 (greater than 0.8) further confirms the model's effectiveness and suitability.
 
 
-
 __Key Findings and Insights__
 
 Logistic regression reveals that people prefer energetic and danceable music, while niche qualities like live recordings or high speech content have less universal appeal. Comparing k-NN models with all features versus only musical features shows that while musical features are strong predictors, incorporating non-musical factors (e.g., explicit content, duration, age) and performance metrics (e.g., weekly and daily movement) enhances prediction. Overall, k-NN outperforms logistic regression, likely due to its ability to capture non-linear relationships between musical features and rank groups, as observed in the EDA.
