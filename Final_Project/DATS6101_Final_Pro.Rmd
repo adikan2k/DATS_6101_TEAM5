@@ -732,8 +732,8 @@ for (col in selected_columns) {
 ## Musical Features
 
 ```{r}
-music_columns <- c(
-  "danceability", 
+num_columns <- c(
+  "daily_rank", "danceability", 
   "energy", "loudness", "speechiness", 
   "acousticness", "instrumentalness", "liveness",
   "valence", "tempo")
