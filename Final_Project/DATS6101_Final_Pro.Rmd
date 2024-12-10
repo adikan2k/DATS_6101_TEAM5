@@ -1626,46 +1626,69 @@ ggplot(explicit_data_frame, aes(x = Cluster, y = Count, fill = Explicit)) +
 ##Temporal Trends in Song Popularity
 #Aggregate Average Popularity Over Time
 ```{r}
-# Aggregated average popularity over time
-popularity_trend <- df_cleaned %>%
-  group_by(snapshot_date) %>%
-  summarize(avg_popularity = mean(popularity, na.rm = TRUE))
+df_cleaned <- df_cleaned %>%
+  mutate(
+    first_appearance = as.Date(first_appearance, format = "%Y-%m-%d"),
+    last_appearance = as.Date(last_appearance, format = "%Y-%m-%d")
+  )
 
-# Plot average popularity trend over time
-ggplot(popularity_trend, aes(x = snapshot_date, y = avg_popularity)) +
+popularity_trend <- df_cleaned %>%
+  group_by(first_appearance) %>%
+  summarize(avg_duration = mean(duration_in_top50, na.rm = TRUE), .groups = "drop")
+
+ggplot(popularity_trend, aes(x = first_appearance, y = avg_duration)) +
   geom_line(color = "blue") +
-  labs(title = "Trend in Average Song Popularity Over Time",
-       x = "Snapshot Date", y = "Average Popularity") +
+  labs(
+    title = "Trend in Average Duration in Top 50 Over Time",
+    x = "First Appearance Date",
+    y = "Average Duration in Top 50"
+  ) +
   theme_minimal()
 ```
 
 # Seasonal analysis: popularity by month
 ```{r}
+library(dplyr)
+library(ggplot2)
+
 df_cleaned <- df_cleaned %>%
-  mutate(month = as.integer(format(snapshot_date, "%m")))
+  mutate(
+    first_appearance = as.Date(first_appearance, format = "%Y-%m-%d"),
+    month = as.integer(format(first_appearance, "%m"))
+  )
 
 monthly_trend <- df_cleaned %>%
   group_by(month) %>%
-  summarize(avg_popularity = mean(popularity, na.rm = TRUE))
+  summarize(avg_duration = mean(duration_in_top50, na.rm = TRUE), .groups = "drop")
 
-ggplot(monthly_trend, aes(x = factor(month), y = avg_popularity)) +
+ggplot(monthly_trend, aes(x = factor(month), y = avg_duration)) +
   geom_bar(stat = "identity", fill = "lightblue") +
-  labs(title = "Average Popularity by Month", x = "Month", y = "Average Popularity") +
+  labs(
+    title = "Average Duration in Top 50 by Month",
+    x = "Month",
+    y = "Average Duration in Top 50"
+  ) +
   theme_minimal()
 ```
 
 # Duration of songs in the Top 50
 ```{r}
 df_cleaned <- df_cleaned %>%
-  group_by(name, artists) %>% 
-  summarize(first_appearance = min(as.Date(snapshot_date)),
-            last_appearance = max(as.Date(snapshot_date))) %>%
+  group_by(name, artists) %>%
+  summarize(
+    first_appearance = min(as.Date(first_appearance)),
+    last_appearance = max(as.Date(last_appearance)),
+    .groups = "drop"
+  ) %>%
   mutate(duration_in_top50 = as.numeric(last_appearance - first_appearance))
 
 ggplot(df_cleaned, aes(x = duration_in_top50)) +
-  geom_histogram(fill = "orange", bins = 30) +
-  labs(title = "Distribution of Song Duration in the Top 50",
-       x = "Duration (days)", y = "Count of Songs") +
+  geom_histogram(fill = "orange", bins = 30, color = "black") +
+  labs(
+    title = "Distribution of Song Duration in the Top 50",
+    x = "Duration (days)",
+    y = "Count of Songs"
+  ) +
   theme_minimal()
 ```
 
