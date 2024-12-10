@@ -1648,30 +1648,6 @@ ggplot(popularity_trend, aes(x = snapshot_date, y = avg_popularity)) +
   theme_minimal()
 ```
 
-# Seasonal analysis: popularity by month
-```{r}
-library(dplyr)
-library(ggplot2)
-
-df_cleaned <- df_cleaned %>%
-  mutate(
-    first_appearance = as.Date(first_appearance, format = "%Y-%m-%d"),
-    month = as.integer(format(first_appearance, "%m"))
-  )
-
-monthly_trend <- df_cleaned %>%
-  group_by(month) %>%
-  summarize(avg_duration = mean(duration_in_top50, na.rm = TRUE), .groups = "drop")
-
-ggplot(monthly_trend, aes(x = factor(month), y = avg_duration)) +
-  geom_bar(stat = "identity", fill = "lightblue") +
-  labs(
-    title = "Average Duration in Top 50 by Month",
-    x = "Month",
-    y = "Average Duration in Top 50"
-  ) +
-  theme_minimal()
-```
 
 ### Advanced Analysis
 
