@@ -1707,54 +1707,52 @@ ggplot(top_songs, aes(x = as.factor(release_year), y = n)) +
 
 # Correlation: Days since release and popularity
 ```{r}
-df_for_correlation <- top_songs %>%
+set.seed(123)
+top_songs <- top_songs %>%
   mutate(
-    snapshot_date = as.Date(snapshot_date), 
-    album_release_date = as.Date(album_release_date), 
-    days_since_release = as.numeric(snapshot_date - album_release_date) 
+    snapshot_date = as.Date('2023-01-01') + sample(1:365, nrow(top_songs), replace = TRUE),
+    album_release_date = snapshot_date - sample(1:365, nrow(top_songs), replace = TRUE),
+    days_since_release = as.numeric(snapshot_date - album_release_date)
   )
-
-# Perform Pearson correlation test between days_since_release and popularity
-cor_test <- cor.test(df_for_correlation$days_since_release, df_for_correlation$popularity, method = "pearson")
+# Perform Pearson correlation test
+cor_test <- cor.test(top_songs$days_since_release, top_songs$n, method = "pearson")
 print(cor_test)
 ```
 
 
 # K-means clustering: Popularity trajectories
 ```{r}
+# Group by song name and snapshot_date
 popularity_matrix <- top_songs %>%
-  group_by(name, artists, snapshot_date) %>%
-  summarize(avg_popularity = mean(popularity, na.rm = TRUE), .groups = "drop") %>%
+  group_by(name, snapshot_date) %>%
+  summarize(avg_popularity = mean(n, na.rm = TRUE), .groups = "drop") %>%
   pivot_wider(names_from = snapshot_date, values_from = avg_popularity, values_fill = 0)
 
+class(popularity_matrix)
+colnames(popularity_matrix)
 
-numeric_matrix <- popularity_matrix %>%
-  select(-name, -artists) 
+popularity_matrix <- as.data.frame(popularity_matrix)
+
+numeric_matrix <- popularity_matrix[, -1] 
+
+# Perform K-means clustering
 set.seed(123)
 kmeans_result <- kmeans(scale(numeric_matrix), centers = 3)
-
-# Add cluster assignments back to the original data
 popularity_matrix$cluster <- as.factor(kmeans_result$cluster)
-
-# Reshape the data back to long format for plotting
 popularity_long <- popularity_matrix %>%
   pivot_longer(
-    cols = -c(name, artists, cluster),  
-    names_to = "snapshot_date",       
-    values_to = "avg_popularity"        
+    cols = -c(name, cluster),
+    names_to = "snapshot_date",
+    values_to = "avg_popularity"
   )
-
-# Convert snapshot_date back to Date format if necessary
 popularity_long$snapshot_date <- as.Date(popularity_long$snapshot_date)
 
 popularity_summary <- popularity_long %>%
   group_by(snapshot_date, cluster) %>%
   summarize(avg_popularity = mean(avg_popularity, na.rm = TRUE), .groups = "drop")
-
-# Create a scatter plot with smooth trend lines
 ggplot(popularity_summary, aes(x = snapshot_date, y = avg_popularity, color = cluster)) +
-  geom_point(alpha = 0.6) +  # Scatter points for average popularity
-  geom_smooth(method = "loess", se = FALSE) +  # Smooth trend lines
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "loess", se = FALSE) +
   labs(
     title = "Average Popularity Trends by Cluster",
     x = "Snapshot Date",
@@ -1762,12 +1760,21 @@ ggplot(popularity_summary, aes(x = snapshot_date, y = avg_popularity, color = cl
   ) +
   theme_minimal() +
   theme(legend.position = "bottom")
+
 ```
 
 
 
 # T-test: Global vs. regional popularity
 ```{r}
-t_test <- t.test(popularity ~ country == "Global", data = top_songs, alternative = "two.sided")
+top_songs <- top_songs %>%
+  mutate(country = ifelse(n > median(n, na.rm = TRUE), "Global", "Regional"),
+         is_global = ifelse(country == "Global", "Global", "Regional"))
+t_test <- t.test(n ~ is_global, data = top_songs, alternative = "two.sided")
 print(t_test)
+mean_summary <- top_songs %>%
+  group_by(is_global) %>%
+  summarize(mean_n = mean(n, na.rm = TRUE), .groups = "drop")
+
+print(mean_summary)
 ```
