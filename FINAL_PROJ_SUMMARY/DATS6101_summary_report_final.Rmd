@@ -109,13 +109,29 @@ TOP ARTISTS AND SONGS:
 
 ## Smart Question 1:  How do Musical attributes like danceability, energy, tempo, valence, and loudness Contribute to song’s Popularity
 
-To address this question, our analysis began with comprehensive Exploratory Data Analysis (EDA) to uncover the relationships between key musical attributes and song popularity. The dataset, comprising 1.4 million records of Spotify's top tracks across 70+ countries, revealed varying distributions for features like loudness, energy, and danceability. These initial findings set the stage for model selection and refinement.
+
+To address this question, our analysis began with comprehensive Exploratory Data Analysis (EDA) to uncover the relationships between key musical attributes and song popularity. The dataset, comprising 1.4 million records of Spotify's top tracks across 70+ countries, revealed varying distributions for features like loudness, energy, and danceability. 
+
+From initial visualizations, we observed that features like loudness and danceability exhibited variability across songs of different popularity levels. Highly popular songs tended to have higher energy and loudness, suggesting these features' potential influence. Non-musical attributes such as explicit content and duration displayed subtler effects but were hypothesized to contribute meaningfully in specific contexts. To validate these findings, detailed density plots and correlation heatmaps were used to visualize feature interactions.
+
+Key observations included variability in features such as loudness and danceability, indicating their potential influence on popularity. Initial density plots of popularity revealed skewness, necessitating preprocessing adjustments to balance the class distribution.
+
+These initial findings set the stage for model selection and refinement.
 
 
-We first explored Linear Regression as a baseline model to predict popularity, treating the target as a continuous variable. However, this model performed poorly, with residual plots revealing heteroscedasticity and non-normal distributions. This highlighted that linear models were insufficient for capturing the complex, non-linear relationships between features like loudness, energy, and acousticness.
+Linear Regression
+Linear regression was chosen as the baseline model due to its simplicity and interpretability. The target variable was treated as continuous, allowing us to examine how individual features contribute to overall popularity scores. However, the model exhibited severe limitations:
+
+Residual analysis revealed non-normality and heteroscedasticity, indicating that the linearity assumption was violated.
+Popularity, being influenced by complex interactions among features, could not be adequately captured by a linear approach.
+
+We tried to adopt methods like cook's distance, applied logarithmic transformations to handle the limitlation 
+These limitations rendered the model unsuitable for robust predictions.
+
+However, despite using several techniques this model performed poorly, with residual plots revealing heteroscedasticity and non-normal distributions. This highlighted that linear models were insufficient for capturing the complex, non-linear relationships between features like loudness, energy, and acousticness.
 
 
-The target variable, song popularity, was categorized into low, medium, and high classes, with SMOTE oversampling applied as shown below, to balance the dataset.
+The target variable, song popularity, was then categorized into low, medium, and high classes, with SMOTE oversampling applied as shown below, to balance the dataset.This leaded to application of logistic and ordinal logistic models
 
 ![](imbalance.png)
 ![](balance.png)
@@ -123,13 +139,33 @@ The target variable, song popularity, was categorized into low, medium, and high
 
 
 
-Logistic Regression was then employed to these categories. Although it improved interpretability, multicollinearity among features (e.g., energy and loudness) and an inability to distinguish medium and high classes resulted in underwhelming performance.
+2. Logistic Regression
+
+Although the model improved interpretability, Multicollinearity among features like energy and loudness reduced the model’s ability to accurately estimate coefficients.
+The model struggled to distinguish between medium and high popularity classes, resulting in poor F1-scores for the low-popularity category.
 
 
-Ordinal Logistic Regression was considered to account for the ordinal nature of the target variable. While this model addressed some challenges, the proportional odds assumption was violated, confirmed by the Brant test. The model achieved moderate accuracy (~52%) but failed to produce reliable results for the low popularity class, reflecting its inability to handle the dataset’s inherent complexities. 
+3. Ordinal Logistic Regression 
+
+Given the ordinal nature of the target variable, ordinal logistic regression was tested as a potential solution. This model assumes that the relationship between predictors and the outcome is proportional across categories. However, the Brant Test revealed violations of the proportional odds assumption, suggesting that the model was not suitable for this dataset.
+
+Accuracy peaked at 52%, indicating limited predictive power.
+The model failed to capture non-linear interactions between features.
 
 
-Ultimately, The Random Forest model achieved a robust accuracy of 93.33%, with precision, recall, and F1 scores all exceeding 93%, demonstrating high reliability. As illustrated in the feature importance plot below, loudness, energy, and acousticness emerged as the most influential predictors of song popularity. These findings align with real-world observations, where songs with higher loudness and danceability frequently rank as global hits. The model's predictions, such as identifying likely hit songs based on these attributes, closely match industry trends and offer actionable insights for producers and marketers.
+4.The Random Forest model (final model)
+
+Ultimately, the random forest classifier achieved a robust accuracy of 93.33%, with precision, recall, and F1 scores all exceeding 93%, demonstrating high reliability. 
+
+The feature importance analysis provided valuable insights into the attributes that most strongly influence song popularity:
+
+Loudness: Songs with higher loudness levels were significantly more likely to rank as highly popular, likely due to their ability to capture listener attention.
+Energy: High-energy tracks correlated strongly with popularity, reflecting listener preferences for dynamic and engaging music.
+Acousticness: While less prominent overall, acousticness contributed meaningfully to niche contexts, such as softer, acoustic genres.
+
+These findings align with real-world observations, where songs with higher loudness and danceability frequently rank as global hits. 
+
+The model's predictions, such as identifying likely hit songs based on these attributes, closely match industry trends and offer actionable insights for producers and marketers.
 
 ![](feature_imp.png)
 ![](ev_met.png)
@@ -145,26 +181,20 @@ The analysis revealed that a song's popularity is influenced by a combination of
 Model Comparison: Random Forest Classification is a good choice while linear and logistic regression, perform poor on the data due to high skewness and non-linear associations between musical features and popularity of songs
 
 
-Reliability and Improvement Opportunities
+##### Reliability and Improvement Opportunities:
+
 While the model provided accurate and actionable insights, limitations were identified. Contextual data such as marketing campaigns or audience demographics could enhance the model's predictive power. Additionally, experimenting with advanced techniques like gradient boosting or neural networks may further refine accuracy. Future research could also explore longitudinal data to assess how musical trends evolve over time.
 
 These findings provide a data-driven perspective on the interplay of musical attributes and popularity, offering valuable guidance for artists, producers, and marketers in the music industry.
 
 
-
-
-
-
-
-
-
 ### Practical Implications :
 
+The model’s predictions align closely with real-world observations, validating its practical utility. For example:
 
-
-
-
-
+Songs characterized by high loudness and danceability were consistently predicted to achieve high popularity.
+Regional trends revealed preferences for acoustic tracks in certain countries, contrasting with global preferences for energetic music.
+These findings offer actionable insights for stakeholders in the music industry. Artists and producers can optimize their compositions by emphasizing the most influential attributes, while streaming platforms can tailor their algorithms to enhance user engagement.
 
 
 
