@@ -99,42 +99,53 @@ This dataset presents the top 50 songs from over 70 countries, as well as global
 
 4. Since the percentage of observations with NAs is relatively low at 0.046% of the observations, we will drop all the other observations with NAs.
 
-# Exploratory Data Analysis
+# AN EXPLORATION OF GLOBAL MUSIC TRENDS: 
+TOP ARTISTS AND SONGS:
+
+![](topartists.png)
+
+![](topsongs.png)
+
+
+## Smart Question 1:  How do Musical attributes like danceability, energy, tempo, valence, and loudness Contribute to song’s Popularity
+
+To address this question, our analysis began with comprehensive Exploratory Data Analysis (EDA) to uncover the relationships between key musical attributes and song popularity. The dataset, comprising 1.4 million records of Spotify's top tracks across 70+ countries, revealed varying distributions for features like loudness, energy, and danceability. These initial findings set the stage for model selection and refinement.
+
+
+We first explored Linear Regression as a baseline model to predict popularity, treating the target as a continuous variable. However, this model performed poorly, with residual plots revealing heteroscedasticity and non-normal distributions. This highlighted that linear models were insufficient for capturing the complex, non-linear relationships between features like loudness, energy, and acousticness.
+
+The target variable, song popularity, was categorized into low, medium, and high classes, with SMOTE oversampling applied to balance the dataset. Logistic Regression was then employed to these categories. Although it improved interpretability, multicollinearity among features (e.g., energy and loudness) and an inability to distinguish medium and high classes resulted in underwhelming performance.
+
+Ordinal Logistic Regression was considered to account for the ordinal nature of the target variable. While this model addressed some challenges, the proportional odds assumption was violated, confirmed by the Brant test. The model achieved moderate accuracy (~52%) but failed to produce reliable results for the low popularity class, reflecting its inability to handle the dataset’s inherent complexities. 
+
+
+Ultimately, The Random Forest model achieved a robust accuracy of 93.33%, with precision, recall, and F1 scores all exceeding 93%, demonstrating high reliability. As illustrated in the feature importance plot below, loudness, energy, and acousticness emerged as the most influential predictors of song popularity. These findings align with real-world observations, where songs with higher loudness and danceability frequently rank as global hits. The model's predictions, such as identifying likely hit songs based on these attributes, closely match industry trends and offer actionable insights for producers and marketers.
+
+![](feature_imp.png)
+![](ev_met.png)
+
+Below shows the confusion matrix of the results obtained from random forest classification model:
+
+![](conf_matrix.png)
 
 
 
 
+Reliability and Improvement Opportunities
+While the model provided accurate and actionable insights, limitations were identified. Contextual data such as marketing campaigns or audience demographics could enhance the model's predictive power. Additionally, experimenting with advanced techniques like gradient boosting or neural networks may further refine accuracy. Future research could also explore longitudinal data to assess how musical trends evolve over time.
 
+These findings provide a data-driven perspective on the interplay of musical attributes and popularity, offering valuable guidance for artists, producers, and marketers in the music industry.
 
-
-
-
-
-
-
-
-## Research Question 1. 
-
-
-
-
-
-
-
-### Bivariate Analysis and Multivariate Analysis : 
-
-
-
-##### Overview of Weather and Lighting Effects:
 
 
 
 ##### Key Findings:
 
+The analysis revealed that a song's popularity is influenced by a combination of song attributes rather than any single feature. Loudness, Danceability and energy drives popularity of songs.
+
+Model Comparison: Random Forest Classification is a good choice while linear and logistic regression, perform poor on the data due to high skewness and non-linear associations between musical features and popularity of songs
 
 
-
-### **Hypothesis Testing**
 
 
 
@@ -144,17 +155,8 @@ This dataset presents the top 50 songs from over 70 countries, as well as global
 
 
 
-## 3. Analysis of Infrastrcture conditions
 
 
-
-#### Bivariate Analysis :
-
-#### Multivariate Analysis :
-
-#### **Tests carried out**
-
-#### 1. chi-square test on the effect of road types
 
 
 ## Smart Question 2: How do musical features influence a song's likelihood of reaching the top 25 rankings on global charts?
