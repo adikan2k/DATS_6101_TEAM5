@@ -187,7 +187,6 @@ __Logistic Regression__
 
 Logistic regression offers simple interpretation of each variable's effect. We employed backward and forward selection to choose features and checked for multicollinearity using VIF. Variables with VIF > 10 were removed to ensure model stability, and insignificant variables were dropped.
 
-
 Notably, `danceability` has the strongest positive relationship with higher rankings. The odds of being in the Top 25 increase by approximately 750.5% with each unit increase. `key` and `mode1` all have positive impact association with higher rankings, while `speechiness`, `instrumentalness`, `acousticness`, `loudness` and `liveness` has negative association with higher rankings.
 
 __K Nearest Neighbor (KNN)__
@@ -196,7 +195,7 @@ Given the moderate performance metrics of logistic regression, we employed KNN, 
 
 We employed two KNN tuning methods using a 3:1 train-test split: manual iterative tuning on the test set and automated cross-validation with the caret package. For the full feature set, both approaches identified k = 3 as optimal. However, for the music-only features, cross-validation favored k = 3 while test set tuning suggested k = 7; considering consistent accuracy and balanced performance, we selected k = 7 as the best model for the music features.
 
-#### Model Evaluation
+### Model Evaluation
 
 | **Metric**             | **Logistic Regression** | **KNN (Full Model)** | **KNN (Music Features Only)** |
 |-----------------------|-------------------------|-----------------------|-------------------------------|
@@ -265,14 +264,9 @@ The clusters show moderate separation, suggesting that the k-means algorithm eff
 This project successfully identified key drivers of song popularity on Spotify, providing actionable insights into musical and non-musical attributes. By leveraging advanced modeling techniques and robust data analysis, the study highlighted significant regional and temporal patterns, offering valuable guidance for artists, producers, and marketers. Future work could extend this analysis to incorporate additional data sources and explore emerging trends in the music industry.
 
 
+# Bibliography
 
+Asaniczka. (2024). Top Spotify Songs in 73 Countries (Daily Updated) [Data set]. Kaggle. https://doi.org/10.34740/KAGGLE/DSV/10210621
 
-
-
-
-
-
-
-
-
-
+Aurelie.Corinthios@groupsjr.com. (2024, March 19). The biggest takeaways from Spotify’sannual Music Economics Report — Spotify. Spotify.
+   https://newsroom.spotify.com/2024-03-19/loud-clear-music-streaming-royalty-data-artst-payments/
