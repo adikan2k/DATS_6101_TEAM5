@@ -134,7 +134,7 @@ However, despite using several techniques this model performed poorly, with resi
 
 #### Applying SMOTE:
 
-The target variable, song popularity, was then categorized into low, medium, and high classes, with SMOTE oversampling applied as shown below, to balance the dataset.This leaded to application of logistic and ordinal logistic models
+The target variable, song popularity, was then categorized into low, medium, and high classes, with SMOTE oversampling applied as shown below, to balance the dataset.This leaded to application of logistic and ordinal logistic models.
 
 ![](imbalance.png)
 ![](balance.png)
@@ -302,14 +302,14 @@ The clusters show moderate separation, suggesting that the k-means algorithm eff
 
 4. Globally popular artists coexist with regional favorites, emphasizing both shared and unique listening habits    worldwide.
 
-### 4. Time Series Decomposition of Song Popularity Trends
+## Smart Question 4: Time Series Decomposition of Song Popularity Trends
 
 In this analysis, we explored the temporal trends in song popularity using time series decomposition. The objective was to break down 
 the song popularity data into its core components—trend, seasonality, and residuals—to uncover the underlying patterns that influence
 a song's performance over time. The dataset used for this analysis, top_songs, contains song names and their aggregated popularity 
 metrics. This method allows us to differentiate between long-term changes, recurring patterns, and random fluctuations in popularity.
 
-# Statistical Analysis
+#### Statistical Analysis
 
 Time series decomposition was used to break down the data into the following components:
 
@@ -324,7 +324,7 @@ Multiplicative Decomposition: Assumes the observed data is a product of the comp
 Seasonal-Trend Decomposition Using Loess (STL): A flexible method that adapts to non-linear trends and irregular seasonal patterns.
 STL decomposition was selected for this analysis as it provided the most accurate and interpretable results, especially for data with non-linear trends and varying seasonality.
 
-# The 4-panel time series decomposition revealed that
+#### The 4-panel time series decomposition revealed that
 
 Observed: The top panel displays the raw data, illustrating the overall patterns and fluctuations in song popularity. 
 This includes a mix of trend, seasonality, and noise.
@@ -335,11 +335,12 @@ to weekly or monthly cycles influenced by events such as album releases or seaso
 Residual: The bottom panel displays the random fluctuations remaining after removing the trend and seasonality. These 
 irregularities capture unpredictable changes, such as sudden spikes due to viral popularity or unexpected dips.
 
-# The three advanced statistical analyses
+#### The three advanced statistical analyses
 
 ANOVA, correlation analysis, and t-tests—were used to address different aspects of the relationship between song features and their popularity. Each method provides unique insights and complements the others, ensuring a comprehensive understanding of the data.
 
-# ANOVA (Analysis of Variance)
+#### ANOVA (Analysis of Variance)
+
 To compare the means of popularity across multiple groups (e.g., explicit vs. non-explicit songs or genres).
 ANOVA is ideal for assessing whether there are statistically significant differences between more than two groups.
 For example, we might want to test if different genres or regions have significantly different average popularity scores.
@@ -348,7 +349,8 @@ ANOVA identifies group-level trends and can indicate whether further pairwise co
 The ANOVA revealed significant differences in average popularity across different release years (p < 0.001).
 Interpretation: Songs released more recently tend to have higher average popularity scores. This suggests that newer songs are favored in streaming trends, possibly due to recency effects or marketing emphasis on contemporary music.
 
-# Correlation Analysis
+#### Correlation Analysis
+
 To measure the strength and direction of linear relationships between numerical variables (e.g., danceability, energy, loudness, etc., and popularity).
 Correlation helps us understand how strongly two variables are related.
 For instance, if danceability has a strong positive correlation with popularity, we can infer that songs with higher danceability are likely more popular.
@@ -357,7 +359,7 @@ Correlation provides a preliminary understanding of variable relationships, help
 A weak but statistically significant negative correlation was found (ρ = -0.15, p < 0.01).
 Interpretation: As time passes, songs gradually lose popularity. While this effect is not strong, it aligns with the lifecycle of music consumption, where interest in older songs wanes over time.
 
-T-Test
+#### T-Test
 To compare the means of two groups (e.g., songs in the Top 25 vs. songs outside the Top 25) to determine if the difference is statistically significant.
 A t-test is essential for focused pairwise comparisons after identifying significant differences with ANOVA.
 For example, it allows us to check if the average danceability of Top 25 songs differs significantly from that of lower-ranked songs.
@@ -366,14 +368,14 @@ T-tests provide detailed insights into specific feature differences, confirming 
 The t-test showed a significant difference in average popularity (p < 0.001). Global charts had a higher mean popularity score (89.13) compared to regional charts (76.24).
 Interpretation: Songs featured on global charts are more universally appealing and have broader audience reach, whereas regional charts highlight music tailored to specific cultural or local tastes.
 
-# Clustering Popularity Trajectories
+#### Clustering Popularity Trajectories
 Using K-means clustering, we grouped songs based on their popularity trajectories. We identified three clusters:
 1. Songs that peak early and decline rapidly,
 2. Songs with a steady rise and fall,
 3. Songs that maintain consistent popularity over time.
 This analysis provides a deeper understanding of the lifecycle of different types of hits.
 
-# Key Findings
+#### Key Findings
 In conclusion, temporal patterns in song popularity reveal
 1. Daily fluctuations driven by external events.
 2. Lifespans of most songs in the Top 50 are short.
@@ -383,12 +385,12 @@ Understanding these patterns is crucial for artists, producers, and platforms li
 The analysis of temporal patterns highlights that song popularity is dynamic and influenced by both internal factors (e.g., song quality and marketing) and external factors (e.g., seasonal events and competition). While most songs have a short-lived popularity span, strategic planning can extend this duration and optimize the song's success in global and regional markets.
 
 
-# Conclusion
+## Conclusion
 
 This project successfully identified key drivers of song popularity on Spotify, providing actionable insights into musical and non-musical attributes. By leveraging advanced modeling techniques and robust data analysis, the study highlighted significant regional and temporal patterns, offering valuable guidance for artists, producers, and marketers. Future work could extend this analysis to incorporate additional data sources and explore emerging trends in the music industry.
 
 
-# Bibliography
+## Bibliography
 
 Asaniczka. (2024). Top Spotify Songs in 73 Countries (Daily Updated) [Data set]. Kaggle. https://doi.org/10.34740/KAGGLE/DSV/10210621
 
