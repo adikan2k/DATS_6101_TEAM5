@@ -1,0 +1,63 @@
+---
+title: "Summary Report"
+author: "Annie Cheng"
+date: "2024-12-13"
+output: html_document
+---
+
+# Introduction
+
+Music industry has always be a alarge part of entertainment industry. Spotify hits its record highest annual payments to the the music industry from any single retailer at $9 billion plus in 2024. 
+
+# Objectives
+
+# Dataset Overview
+
+Dataset consists of top 50 songs scross 70+ countries and from global ranking. The data is extracted from Spotify API and updated daily. The source
+
+# Analysis and Results
+
+## Smart Question 2: How do musical features influence a song's likelihood of reaching the top 25 rankings on global charts?
+
+After analyzing how musical features affect a song's popularity, we will be changing our focus to another performance metric, daily ranking, and especially at global charts. Narrowing our focus on global chart can prevent regional bias, which can confound our predicting model.
+
+### EDA
+
+To prepare the dataset for this specific question, we first filter out those rankings from global charts. Then, create a new columns `top_25`, which would indicate whether a song falls within top 25 or not.
+
+![](q2_music_pair.png)
+
+### Model Exploration
+
+In order to answer this question,two predictive models, __K-Nearest Neighbor__ and __Logistic Regression__, are utilize to predict the binary “top_25” feature, songs withint global top 25 or not.
+
+__Logistic Regression__
+
+Logistic regression is particularly useful for simple interpretation on each variables. We use backward and forward selction to select featrues, then check for multi collinearity (VIF). After dropping varaibles with VIF > 10, we 
+
+Notably, `dancebility` has the strongest positive relationship with higher rankings. he odds of being in the Top 25 increase by approximately 750.5% with a unit increase in `danacebility`. `key` and `mode1` all have positive impact association with higher rankings, while `speechiness`, `instrumentalness`, `acusticness`, `loudness` and `liveness` has negative association with higher rankings.
+
+__K Nearest Neighbor (KNN)__
+
+Since the performance metrics if logistic regression is not ideal, we further employed KNN, which is also a great option for binary classification problem. To prepared the data for KNN, we convert all variables into numeric and scaled them to standardized. We started by building a model using all features and employed both a train-test split and cross-validation to tune and validate the performance. Then we find the optimal k using cross validation and train and test split. For KNN with all features, we find the best k = 3 with both approaches. However, for KNN with music features, we find the best k=3 when using cross validation and k=7 when using train test split. Since k=7 shows consistent accuracy and close to k=3 accuracy across cross validation and k=3 model appear to have unbalanced specificity and sensitivity when using test set. Therefore, we selected k=7 as the best model fro model with music features.
+
+Using predictive model, logistical regression and KNN, we can make prediction on whether a song falls under the upper half (top 25) of the global charts or lower (26-50) based on their features.
+
+#### Model Evaluation
+
+Finally, we compare the model performance of logistic regression and KNN. The logistic regression model demonstrates moderate accuracy at 61.4%, with stronger sensitivity (64.6%) compared to weaker specificity (58.1%). This imbalance suggests that the model is biased towards predicting class 0. The AUC is 0.677, which falls below the threshold of 0.8, indicating a relatively low ability to distinguish between classes. Additionally, the McFadden’s R² value is only 0.0832, meaning the model explains just 8.32% of the variation in the target variable. These metrics suggest that the model does not provide a good fit. Therefore, exploring alternative modeling techniques is recommended. 
+
+KNN with all features demonstrates excellent performance, with total accuracy, specificity, and sensitivity each achieving the average of 85% in ross validation. Additionally, the AUC score of 0.913 confirms that the model is a strong fit for the data. KNN with music features also showcases consistent accuracy, specificity, and sensitivy The AUC score of 0.8136 (greater than 0.8) further confirms the model’s effectiveness and suitability.
+
+### Key Fings
+
+
+
+# Bibliography
+
+Aurelie.Corinthios@groupsjr.com. (2024, March 19). The biggest takeaways from Spotify’s
+   annual Music Economics Report — Spotify. Spotify.
+   https://newsroom.spotify.com/2024-03-19/loud-clear-music-streaming-royalty-data-art
+   st-payments/
+
+   
