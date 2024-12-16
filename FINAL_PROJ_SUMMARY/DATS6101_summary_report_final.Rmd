@@ -231,7 +231,7 @@ Using elbow method, we found the optimal number of clusters to be around 5. We t
 
 ![](pca_3D.png)
 
-The 3D plot highlights well-defined clusters of countries based on their musical preferences, with distinct groupings and some overlap.
+The clusters show moderate separation, suggesting that the k-means algorithm effectively identified countries with distinct musical preferences while accounting for some overlap. The distribution along PC1 indicates it captures the largest variance, making it the most influential component in distinguishing clusters. Since these three components explain 78.23% of the total variance, the plot captures most of the relationships and distinctions among countries' musical preferences.
 
 ## Attribute differences across clusters
 
