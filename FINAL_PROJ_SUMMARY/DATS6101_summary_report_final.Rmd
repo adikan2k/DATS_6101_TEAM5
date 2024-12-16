@@ -41,8 +41,7 @@ library(here)
 
 Music industry has long been a significant component of entertainment sector. In 2024, Spotify achieves a remarkable milestone by surpassing $9 billion in annual payments to the music industry from any single retailer. As this vibrant ecosystem continues to expand, billions of songs compete for listener attention across diverse audiences. Understanding what makes certain tracks resonate is more critical than ever. 
 
-This study provides a comprehensive analysis of the factors influencing song popularity. By examining how music attributes influence popularity and chart success, exploring regional variations in listener preferences, and identifying temporal patterns in the rise and fall of popularity. By developing predictive models based on these insights, we aim to forecast a song’s potential success and offer actionable strategies for stakeholders—artists, producers, and marketers—to optimize song production and tailor content to audience preferences.
-
+This study provides a comprehensive analysis of the factors influencing song popularity. By examining how music attributes influence popularity and chart success, exploring regional variations in listener preferences, and identifying temporal patterns in the rise and fall of popularity. Building on these insights, we develop predictive models to forecast a song’s potential success. Ultimately, our findings offer actionable strategies that can help artists, producers, and marketers refine their creative and promotional approaches to achieve better popularity.
 
 #### **Objectives**
 
@@ -76,7 +75,8 @@ Q4: What temporal patterns exist in rise and fall of song popularity?
 
 # Dataset Overview
 
-The dataset comprises the top 50 songs from over 70 countries, based on global rankings. Data is collected daily by querying the Spotify API for the top 50 songs in each country. This specific dataset is sourced from [Kaggle](https://www.kaggle.com/datasets/asaniczka/top-spotify-songs-in-73-countries-daily-updated/data) and includes a comprehensive range of features categorized into basic information, temporal features, chart performance, musical attributes, and non-musical attributes.
+This dataset presents the top 50 songs from over 70 countries, as well as global rankings, updated daily from October 18, 2023, to November 20, 2024. The data is sourced from [Kaggle](https://www.kaggle.com/datasets/asaniczka/top-spotify-songs-in-73-countries-daily-updated/data) and is collected by querying the Spotify API each day. This dataset comprises more than 1.4 million song entries and a comprehensive range of features categorized into basic information, temporal features, chart performance, musical attributes, and non-musical attributes.
+
 
 - __Basic Information__: `name`, `artists`, `album_name`, and  `country`
 
@@ -84,8 +84,7 @@ The dataset comprises the top 50 songs from over 70 countries, based on global r
 
 - __Chart Performance__: `daily_rank`, `daily_movement`, `weekly_movement`,`popularity`
 
-- __Musical Attributes__:
-`danceability`, `energy`, `tempo`, `acousticness`, `valence`, `loudness`, `instrumentalness`, `liveness`, `speechiness`, `key`, `mode`, `time_signature`
+- __Musical Attributes__:`danceability`, `energy`, `tempo`, `acousticness`, `valence`, `loudness`, `instrumentalness`, `liveness`, `speechiness`, `key`, `mode`, `time_signature`
 
 - __Non-Musical Attributes__:`is_explicit`, `duration_ms`
 
@@ -98,8 +97,7 @@ The dataset comprises the top 50 songs from over 70 countries, based on global r
 
 3. According to the data description, NAs in `country` means Global Top 50. Therefore, we will fill NAs with 'Global'.
 
-4. Since the percentage of observations with NAs is relatively low at 0.046% of the observations; therefore, we will drop all the other observations with NAs.
-
+4. Since the percentage of observations with NAs is relatively low at 0.046% of the observations, we will drop all the other observations with NAs.
 
 # Exploratory Data Analysis
 
@@ -176,6 +174,7 @@ The pair plot of daily rank and various music features does not reveal a clear m
 Top 25 songs tend to have higher `danceability`, `loudness`, `energy`, and lower `acousticness`, suggesting that upbeat, energetic, and less acoustic tracks are more likely to rank highly. Subsequently, we conducted t-tests to check for statistical significance of each musical feature .
 
 __Null Hypothesis__: There is no significant difference in the mean values of the musical feature between the Top 25 and Top 26-50 groups.
+
 __Alternative Hypothesis__: There is a significant difference in the mean values of the musical feature between the Top 25 and Top 26-50 groups.
 
 The t-tests revealed no significant difference in `tempo` and `energy` (p-value < 0.05) between the Top 25 and Top 26-50 groups. However, with p-values < 0.05 for  `loudness`, `speechiness`, `acousticness`, `instrumentalness`, `liveness`,`valence`, `danceability`, we can conclude these features significantly differ between the two groups.
