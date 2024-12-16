@@ -285,10 +285,14 @@ STL decomposition was selected for this analysis as it provided the most accurat
 
 # The 4-panel time series decomposition revealed that
 
-Observed: The top panel displays the raw data, illustrating the overall patterns and fluctuations in song popularity. This includes a mix of trend, seasonality, and noise.
-Trend: The second panel isolates the long-term trend in song popularity. It highlights gradual increases or decreases over time, reflecting broader shifts in the music industry or listener preferences.
-Seasonality: The third panel shows recurring patterns, revealing periodic rises and falls in popularity. These may correspond to weekly or monthly cycles influenced by events such as album releases or seasonal festivities.
-Residual: The bottom panel displays the random fluctuations remaining after removing the trend and seasonality. These irregularities capture unpredictable changes, such as sudden spikes due to viral popularity or unexpected dips.
+Observed: The top panel displays the raw data, illustrating the overall patterns and fluctuations in song popularity. 
+This includes a mix of trend, seasonality, and noise.
+Trend: The second panel isolates the long-term trend in song popularity. It highlights gradual increases or decreases over time, 
+reflecting broader shifts in the music industry or listener preferences.
+Seasonality: The third panel shows recurring patterns, revealing periodic rises and falls in popularity. These may correspond 
+to weekly or monthly cycles influenced by events such as album releases or seasonal festivities.
+Residual: The bottom panel displays the random fluctuations remaining after removing the trend and seasonality. These 
+irregularities capture unpredictable changes, such as sudden spikes due to viral popularity or unexpected dips.
 
 # The three advanced statistical analyses
 
