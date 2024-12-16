@@ -263,7 +263,10 @@ The clusters show moderate separation, suggesting that the k-means algorithm eff
 
 ### 4. Time Series Decomposition of Song Popularity Trends
 
-In this analysis, we explored the temporal trends in song popularity using time series decomposition. The objective was to break down the song popularity data into its core components—trend, seasonality, and residuals—to uncover the underlying patterns that influence a song's performance over time. The dataset used for this analysis, top_songs, contains song names and their aggregated popularity metrics. This method allows us to differentiate between long-term changes, recurring patterns, and random fluctuations in popularity.
+In this analysis, we explored the temporal trends in song popularity using time series decomposition. The objective was to break down 
+the song popularity data into its core components—trend, seasonality, and residuals—to uncover the underlying patterns that influence
+a song's performance over time. The dataset used for this analysis, top_songs, contains song names and their aggregated popularity 
+metrics. This method allows us to differentiate between long-term changes, recurring patterns, and random fluctuations in popularity.
 
 # Statistical Analysis
 
