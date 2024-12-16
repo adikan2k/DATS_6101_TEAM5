@@ -250,6 +250,16 @@ The clusters show moderate separation, suggesting that the k-means algorithm eff
 
 5. **Cluster 5 (blue)** is predominantly in Northern and Central Europe, alongside South Korea, showcasing strong regional similarities. Includes global icons like Billie Eilish and Jimin from BTS, as well as Sabrina Carpenter and Benson Boone. This cluster emphasizes a mix of pop and K-pop influences, which align with its concentration in Europe and South Korea.
 
+## Key Findings
+
+1. Musical preferences are influenced by geography and culture, leading to distinct clusters.
+
+2. Western mainstream pop dominates certain regions (Cluster 2), while Latin America (Cluster 3) and parts of      Asia (Cluster 4) show strong regional influences.
+
+3. Attributes like danceability, acousticness, and instrumentalness highlight cluster-specific trends.
+
+4. Globally popular artists coexist with regional favorites, emphasizing both shared and unique listening habits    worldwide.
+
 # Conclusion
 
 This project successfully identified key drivers of song popularity on Spotify, providing actionable insights into musical and non-musical attributes. By leveraging advanced modeling techniques and robust data analysis, the study highlighted significant regional and temporal patterns, offering valuable guidance for artists, producers, and marketers. Future work could extend this analysis to incorporate additional data sources and explore emerging trends in the music industry.
