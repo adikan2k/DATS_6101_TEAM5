@@ -43,7 +43,6 @@ Music industry has long been a significant component of entertainment sector. In
 
 This study provides a comprehensive analysis of the factors influencing song popularity. By examining how music attributes influence popularity and chart success, exploring regional variations in listener preferences, and identifying temporal patterns in the rise and fall of popularity. Building on these insights, we develop predictive models to forecast a song’s potential success. Ultimately, our findings offer actionable strategies that can help artists, producers, and marketers refine their creative and promotional approaches to achieve better popularity.
 
-
 #### **Objectives**
 
 Analyze the Influence of Musical Attributes:
@@ -78,6 +77,7 @@ Q4: What temporal patterns exist in rise and fall of song popularity?
 
 This dataset presents the top 50 songs from over 70 countries, as well as global rankings, updated daily from October 18, 2023, to November 20, 2024. The data is sourced from [Kaggle](https://www.kaggle.com/datasets/asaniczka/top-spotify-songs-in-73-countries-daily-updated/data) and is collected by querying the Spotify API each day. This dataset comprises more than 1.4 million song entries and a comprehensive range of features categorized into basic information, temporal features, chart performance, musical attributes, and non-musical attributes.
 
+
 - __Basic Information__: `name`, `artists`, `album_name`, and  `country`
 
 - __Temporal features__: `snapshot_date`, `album_release_date`
@@ -98,7 +98,6 @@ This dataset presents the top 50 songs from over 70 countries, as well as global
 3. According to the data description, NAs in `country` means Global Top 50. Therefore, we will fill NAs with 'Global'.
 
 4. Since the percentage of observations with NAs is relatively low at 0.046% of the observations, we will drop all the other observations with NAs.
-
 
 # Exploratory Data Analysis
 
