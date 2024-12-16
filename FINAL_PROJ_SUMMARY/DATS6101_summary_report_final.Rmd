@@ -119,29 +119,31 @@ Key observations included variability in features such as loudness and danceabil
 These initial findings set the stage for model selection and refinement.
 
 
-Linear Regression
+1. Linear Regression( Baseline model )
+
 Linear regression was chosen as the baseline model due to its simplicity and interpretability. The target variable was treated as continuous, allowing us to examine how individual features contribute to overall popularity scores. However, the model exhibited severe limitations:
 
 Residual analysis revealed non-normality and heteroscedasticity, indicating that the linearity assumption was violated.
 Popularity, being influenced by complex interactions among features, could not be adequately captured by a linear approach.
 
-We tried to adopt methods like cook's distance, applied logarithmic transformations to handle the limitlation 
+We tried to adopt methods like cook's distance, applied logarithmic transformations to handle the limitation 
 These limitations rendered the model unsuitable for robust predictions.
 
 However, despite using several techniques this model performed poorly, with residual plots revealing heteroscedasticity and non-normal distributions. This highlighted that linear models were insufficient for capturing the complex, non-linear relationships between features like loudness, energy, and acousticness.
 
+
+##### Applying SMOTE:
 
 The target variable, song popularity, was then categorized into low, medium, and high classes, with SMOTE oversampling applied as shown below, to balance the dataset.This leaded to application of logistic and ordinal logistic models
 
 ![](imbalance.png)
 ![](balance.png)
 
-
-
-
 2. Logistic Regression
 
-Although the model improved interpretability, Multicollinearity among features like energy and loudness reduced the model’s ability to accurately estimate coefficients.
+This model assumed the target variable as populatiry categories ( high, medium, low) as shown above throgh smote technique. 
+
+The model improved interpretability but Multicollinearity among features like energy and loudness reduced the its ability to accurately estimate coefficients.
 The model struggled to distinguish between medium and high popularity classes, resulting in poor F1-scores for the low-popularity category.
 
 
