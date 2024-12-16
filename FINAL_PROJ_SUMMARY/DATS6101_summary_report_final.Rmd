@@ -221,6 +221,34 @@ Logistic regression reveals that energetic and danceable music tends to achieve,
 For future work, ensemble models such as Random Forest or XGBoost could be explored to address KNN’s lack of built-in feature importance. These models could potentially enhance predictive performance by capturing complex interactions
 
 
+## Smart Question 3: How do musical preferences vary across countries and regions?
+
+In our analysis of Spotify data across 73 countries, delving into each country individually proved to be overwhelming due to the scale and complexity of the dataset. To streamline the process and uncover meaningful patterns, we employed k-means clustering to group countries based on their musical preferences. This approach allowed us to identify distinct clusters that reflect shared tastes in music, such as danceability, tempo preferences, loudness and valence. By analyzing these clusters instead of individual countries, we gained deeper insights into regional and cultural similarities, enabling a more concise yet comprehensive understanding of global music trends. 
+
+## K-Means Clustering
+
+Using elbow method, we found the optimal number of clusters to be around 5. We then applied Principal Component Analysis (PCA) to visualize the clustering results effectively. The PCA plot, which explains 78.23% of the variance in the data, reduces the high-dimensional feature space into three principal components. This dimensionality reduction enabled us to project the clustered data into a 3D space, where distinct groupings can be observed.
+
+![](pca_3D.png)
+
+The 3D plot highlights well-defined clusters of countries based on their musical preferences, with distinct groupings and some overlap.
+
+## Attribute differences across clusters
+
+![](attributes.png)
+![](world_clusters.png)
+
+![](artists_cluster.png)
+
+1. **Cluster 2 (orange)** includes the USA, Canada, and Australia, suggesting similar musical preferences across these English-speaking, high-streaming nations. Dominated by international pop stars like Taylor Swift, Billie Eilish, and Ariana Grande, these artists are extremely popular in countries with widespread access to Western mainstream music.
+
+2. **Cluster 3 (yellow)** spans much of South America and parts of Africa, reflecting shared listening behaviors within regions that likely favor upbeat and dance-oriented music. Features Latin American artists like Bad Bunny, Feid, and KAROL G, highlighting the cluster's strong affinity for Latin music.
+
+3. **Cluster 4 (green)** comprises parts of Asia and Eastern Europe, indicating distinct preferences compared to Western countries. Includes a mix of international artists such as Taylor Swift and regional artists like Shubh and Hafdis Huld, reflecting regional diversity in preferences.
+
+4. **Cluster 1 (red)** includes a limited set of countries like Russia, Ethiopia, and South Africa, hinting at niche or unique musical tastes. Includes niche or localized artists such as Bakr and Jessica Shy, alongside globally recognized artists like Billie Eilish and Sabrina Carpenter. This suggests a blend of localized and mainstream music tastes.
+
+5. **Cluster 5 (blue)** is predominantly in Northern and Central Europe, alongside South Korea, showcasing strong regional similarities. Includes global icons like Billie Eilish and Jimin from BTS, as well as Sabrina Carpenter and Benson Boone. This cluster emphasizes a mix of pop and K-pop influences, which align with its concentration in Europe and South Korea.
 
 # Conclusion
 
