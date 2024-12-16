@@ -119,7 +119,7 @@ Key observations included variability in features such as loudness and danceabil
 These initial findings set the stage for model selection and refinement.
 
 
-1. Linear Regression( Baseline model )
+#### 1. Linear Regression( Baseline model )
 
 Linear regression was chosen as the baseline model due to its simplicity and interpretability. The target variable was treated as continuous, allowing us to examine how individual features contribute to overall popularity scores. However, the model exhibited severe limitations:
 
@@ -132,14 +132,14 @@ These limitations rendered the model unsuitable for robust predictions.
 However, despite using several techniques this model performed poorly, with residual plots revealing heteroscedasticity and non-normal distributions. This highlighted that linear models were insufficient for capturing the complex, non-linear relationships between features like loudness, energy, and acousticness.
 
 
-##### Applying SMOTE:
+#### Applying SMOTE:
 
 The target variable, song popularity, was then categorized into low, medium, and high classes, with SMOTE oversampling applied as shown below, to balance the dataset.This leaded to application of logistic and ordinal logistic models
 
 ![](imbalance.png)
 ![](balance.png)
 
-2. Logistic Regression
+#### 2. Logistic Regression
 
 This model assumed the target variable as populatiry categories ( high, medium, low) as shown above throgh smote technique. 
 
@@ -147,7 +147,7 @@ The model improved interpretability but Multicollinearity among features like en
 The model struggled to distinguish between medium and high popularity classes, resulting in poor F1-scores for the low-popularity category.
 
 
-3. Ordinal Logistic Regression 
+#### 3. Ordinal Logistic Regression 
 
 Given the ordinal nature of the target variable, ordinal logistic regression was tested as a potential solution. This model assumes that the relationship between predictors and the outcome is proportional across categories. However, the Brant Test revealed violations of the proportional odds assumption, suggesting that the model was not suitable for this dataset.
 
@@ -155,7 +155,7 @@ Accuracy peaked at 52%, indicating limited predictive power.
 The model failed to capture non-linear interactions between features.
 
 
-4.The Random Forest model (final model)
+#### 4.The Random Forest model (final model)
 
 Ultimately, the random forest classifier achieved a robust accuracy of 93.33%, with precision, recall, and F1 scores all exceeding 93%, demonstrating high reliability. 
 
@@ -176,14 +176,14 @@ Below shows the confusion matrix of the results obtained from random forest clas
 
 ![](conf_matrix.png)
 
-##### Key Findings:
+### Key Findings:
 
 The analysis revealed that a song's popularity is influenced by a combination of song attributes rather than any single feature. Loudness, Danceability and energy drives popularity of songs.
 
 Model Comparison: Random Forest Classification is a good choice while linear and logistic regression, perform poor on the data due to high skewness and non-linear associations between musical features and popularity of songs
 
 
-##### Reliability and Improvement Opportunities:
+### Reliability and Improvement Opportunities:
 
 While the model provided accurate and actionable insights, limitations were identified. Contextual data such as marketing campaigns or audience demographics could enhance the model's predictive power. Additionally, experimenting with advanced techniques like gradient boosting or neural networks may further refine accuracy. Future research could also explore longitudinal data to assess how musical trends evolve over time.
 
