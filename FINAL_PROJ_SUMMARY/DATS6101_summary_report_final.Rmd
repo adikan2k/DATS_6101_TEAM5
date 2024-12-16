@@ -114,7 +114,17 @@ To address this question, our analysis began with comprehensive Exploratory Data
 
 We first explored Linear Regression as a baseline model to predict popularity, treating the target as a continuous variable. However, this model performed poorly, with residual plots revealing heteroscedasticity and non-normal distributions. This highlighted that linear models were insufficient for capturing the complex, non-linear relationships between features like loudness, energy, and acousticness.
 
-The target variable, song popularity, was categorized into low, medium, and high classes, with SMOTE oversampling applied to balance the dataset. Logistic Regression was then employed to these categories. Although it improved interpretability, multicollinearity among features (e.g., energy and loudness) and an inability to distinguish medium and high classes resulted in underwhelming performance.
+
+The target variable, song popularity, was categorized into low, medium, and high classes, with SMOTE oversampling applied as shown below, to balance the dataset.
+
+![](imbalance.png)
+![](balance.png)
+
+
+
+
+Logistic Regression was then employed to these categories. Although it improved interpretability, multicollinearity among features (e.g., energy and loudness) and an inability to distinguish medium and high classes resulted in underwhelming performance.
+
 
 Ordinal Logistic Regression was considered to account for the ordinal nature of the target variable. While this model addressed some challenges, the proportional odds assumption was violated, confirmed by the Brant test. The model achieved moderate accuracy (~52%) but failed to produce reliable results for the low popularity class, reflecting its inability to handle the dataset’s inherent complexities. 
 
@@ -128,7 +138,11 @@ Below shows the confusion matrix of the results obtained from random forest clas
 
 ![](conf_matrix.png)
 
+##### Key Findings:
 
+The analysis revealed that a song's popularity is influenced by a combination of song attributes rather than any single feature. Loudness, Danceability and energy drives popularity of songs.
+
+Model Comparison: Random Forest Classification is a good choice while linear and logistic regression, perform poor on the data due to high skewness and non-linear associations between musical features and popularity of songs
 
 
 Reliability and Improvement Opportunities
@@ -139,11 +153,6 @@ These findings provide a data-driven perspective on the interplay of musical att
 
 
 
-##### Key Findings:
-
-The analysis revealed that a song's popularity is influenced by a combination of song attributes rather than any single feature. Loudness, Danceability and energy drives popularity of songs.
-
-Model Comparison: Random Forest Classification is a good choice while linear and logistic regression, perform poor on the data due to high skewness and non-linear associations between musical features and popularity of songs
 
 
 
