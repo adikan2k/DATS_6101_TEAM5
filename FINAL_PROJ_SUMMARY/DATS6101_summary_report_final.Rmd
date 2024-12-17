@@ -8,6 +8,7 @@ output:
     toc_depth: 3
     toc_float: true
     code_folding: hide
+    number_sections: true
 ---
 
 ```{r message=TRUE, include=FALSE, results='asis'}
@@ -24,26 +25,15 @@ library(here)
 ```
 
 
-# Abstract 
-
-
-
-
-
-
-
-
-
-
 # Introduction
 
-#### **Background** 
+## Background 
 
 Music industry has long been a significant component of entertainment sector. In 2024, Spotify achieves a remarkable milestone by surpassing $9 billion in annual payments to the music industry from any single retailer. As this vibrant ecosystem continues to expand, billions of songs compete for listener attention across diverse audiences. Understanding what makes certain tracks resonate is more critical than ever. 
 
 This study provides a comprehensive analysis of the factors influencing song popularity. By examining how music attributes influence popularity and chart success, exploring regional variations in listener preferences, and identifying temporal patterns in the rise and fall of popularity. Building on these insights, we develop predictive models to forecast a song’s potential success. Ultimately, our findings offer actionable strategies that can help artists, producers, and marketers refine their creative and promotional approaches to achieve better popularity.
 
-#### **Objectives**
+## Objectives
 
 Analyze the Influence of Musical Attributes:
 To examine how musical features like danceability, energy, tempo, valence, and loudness contribute to the popularity of songs, providing insights into key drivers of listener engagement and chart performance.
@@ -58,7 +48,7 @@ Identify Temporal Patterns in Song Popularity:
 To investigate trends in the rise and fall of song popularity over time, analyzing seasonal patterns and the lifespan of popular songs to inform optimal release strategies.
 
 
-#### **Research questions**
+## Research questions
 
 The backbone of our study lies in answering the following SMART questions:
 
@@ -107,8 +97,7 @@ TOP ARTISTS AND SONGS:
 ![](topsongs.png)
 
 
-## Smart Question 1:  How do Musical attributes like danceability, energy, tempo, valence, and loudness Contribute to song’s Popularity
-
+# Smart Question 1:  How do musical attributes like danceability, energy, tempo, valence, and loudness contribute to song’s Popularity
 
 To address this question, our analysis began with comprehensive Exploratory Data Analysis (EDA) to uncover the relationships between key musical attributes and song popularity. The dataset, comprising 1.4 million records of Spotify's top tracks across 70+ countries, revealed varying distributions for features like loudness, energy, and danceability. 
 
@@ -118,8 +107,9 @@ Key observations included variability in features such as loudness and danceabil
 
 These initial findings set the stage for model selection and refinement.
 
+## Model Exploration
 
-#### 1. Linear Regression( Baseline model )
+### Linear Regression( Baseline model )
 
 Linear regression was chosen as the baseline model due to its simplicity and interpretability. The target variable was treated as continuous, allowing us to examine how individual features contribute to overall popularity scores. However, the model exhibited severe limitations:
 
@@ -139,7 +129,7 @@ The target variable, song popularity, was then categorized into low, medium, and
 ![](imbalance.png)
 ![](balance.png)
 
-#### 2. Logistic Regression
+### Logistic Regression
 
 This model assumed the target variable as populatiry categories ( high, medium, low) as shown above throgh smote technique. 
 
@@ -147,7 +137,7 @@ The model improved interpretability but Multicollinearity among features like en
 The model struggled to distinguish between medium and high popularity classes, resulting in poor F1-scores for the low-popularity category.
 
 
-#### 3. Ordinal Logistic Regression 
+### Ordinal Logistic Regression 
 
 Given the ordinal nature of the target variable, ordinal logistic regression was tested as a potential solution. This model assumes that the relationship between predictors and the outcome is proportional across categories. However, the Brant Test revealed violations of the proportional odds assumption, suggesting that the model was not suitable for this dataset.
 
@@ -155,7 +145,7 @@ Accuracy peaked at 52%, indicating limited predictive power.
 The model failed to capture non-linear interactions between features.
 
 
-#### 4.The Random Forest model (final model)
+### The Random Forest model (final model)
 
 Ultimately, the random forest classifier achieved a robust accuracy of 93.33%, with precision, recall, and F1 scores all exceeding 93%, demonstrating high reliability. 
 
@@ -176,21 +166,13 @@ Below shows the confusion matrix of the results obtained from random forest clas
 
 ![](conf_matrix.png)
 
-### Key Findings:
+## Key Findings
 
 The analysis revealed that a song's popularity is influenced by a combination of song attributes rather than any single feature. Loudness, Danceability and energy drives popularity of songs.
 
 Model Comparison: Random Forest Classification is a good choice while linear and logistic regression, perform poor on the data due to high skewness and non-linear associations between musical features and popularity of songs
 
-
-### Reliability and Improvement Opportunities:
-
-While the model provided accurate and actionable insights, limitations were identified. Contextual data such as marketing campaigns or audience demographics could enhance the model's predictive power. Additionally, experimenting with advanced techniques like gradient boosting or neural networks may further refine accuracy. Future research could also explore longitudinal data to assess how musical trends evolve over time.
-
-These findings provide a data-driven perspective on the interplay of musical attributes and popularity, offering valuable guidance for artists, producers, and marketers in the music industry.
-
-
-### Practical Implications :
+## Practical Implications
 
 The model’s predictions align closely with real-world observations, validating its practical utility. For example:
 
@@ -198,13 +180,17 @@ Songs characterized by high loudness and danceability were consistently predicte
 Regional trends revealed preferences for acoustic tracks in certain countries, contrasting with global preferences for energetic music.
 These findings offer actionable insights for stakeholders in the music industry. Artists and producers can optimize their compositions by emphasizing the most influential attributes, while streaming platforms can tailor their algorithms to enhance user engagement.
 
+## Reliability and Improvement Opportunities
 
+While the model provided accurate and actionable insights, limitations were identified. Contextual data such as marketing campaigns or audience demographics could enhance the model's predictive power. Additionally, experimenting with advanced techniques like gradient boosting or neural networks may further refine accuracy. Future research could also explore longitudinal data to assess how musical trends evolve over time.
 
-## Smart Question 2: How do musical features influence a song's likelihood of reaching the top 25 rankings on global charts?
+These findings provide a data-driven perspective on the interplay of musical attributes and popularity, offering valuable guidance for artists, producers, and marketers in the music industry.
+
+# Smart Question 2: How do musical features influence a song's likelihood of reaching the top 25 rankings on global charts?
 
 After analyzing how musical features affect a song's popularity, we shift our focus to another performance metric: daily ranking, specifically within global charts.  Focusing on global rankings helps eliminate regional biases that could confound our predictive model.
 
-### EDA
+## EDA
 
 To prepare the dataset for this question, we first filtered the dataset to include only rankings from global charts. We then created a new columns `top_25`, indicating whether a song falls within top 25 global ranking.
 
@@ -222,23 +208,23 @@ __Alternative Hypothesis__: There is a significant difference in the mean values
 
 The t-tests revealed no significant difference in `tempo` and `energy` (p-value < 0.05) between the Top 25 and Top 26-50 groups. However, with p-values < 0.05 for  `loudness`, `speechiness`, `acousticness`, `instrumentalness`, `liveness`,`valence`, `danceability`, we can conclude these features significantly differ between the two groups.
 
-### Model Exploration
+## Model Exploration
 
 In predict whether a song is within the global top 25,we utilized two predictive models: __K-Nearest Neighbor__ and __Logistic Regression__, 
 
-__Logistic Regression__
+### Logistic Regression
 
 Logistic regression offers simple interpretation of each variable's effect. We employed backward and forward selection to choose features and checked for multicollinearity using VIF. Variables with VIF > 10 were removed to ensure model stability, and insignificant variables were dropped.
 
 Notably, `danceability` has the strongest positive relationship with higher rankings. The odds of being in the Top 25 increase by approximately 750.5% with each unit increase. `key` and `mode1` all have positive impact association with higher rankings, while `speechiness`, `instrumentalness`, `acousticness`, `loudness` and `liveness` has negative association with higher rankings.
 
-__K Nearest Neighbor (KNN)__
+### K Nearest Neighbor (KNN)
 
 Given the moderate performance metrics of logistic regression, we employed KNN, which is well-suited for binary classification tasks. Data preparation involved converting all variables to numeric types and standardizing them. We built two KNN models one full model and one with music features only. 
 
 We employed two KNN tuning methods using a 3:1 train-test split: manual iterative tuning on the test set and automated cross-validation with the caret package. For the full feature set, both approaches identified k = 3 as optimal. However, for the music-only features, cross-validation favored k = 3 while test set tuning suggested k = 7; considering consistent accuracy and balanced performance, we selected k = 7 as the best model for the music features.
 
-### Model Evaluation
+## Model Evaluation
 
 | **Metric**             | **Logistic Regression** | **KNN (Full Model)** | **KNN (Music Features Only)** |
 |-----------------------|-------------------------|-----------------------|-------------------------------|
@@ -254,7 +240,7 @@ The logistic regression model demonstrates moderate accuracy at 61.4%, with stro
 In contrast, the KNN full model excels with an accuracy, sensitivity, and specificity each around 85%, and an AUC of 0.913, indicating strong discriminative ability. The KNN model using only music features also performs well, achieving 74.71% accuracy, consistent precision, sensitivity and specificity and an AUC of 0.814. These results demonstrate that KNN models, especially the full model, are highly effective for this dataset.
 
 
-### Key Findings
+## Key Findings
 
 Using predictive models-logistical regression and KNN- we can predict whether a song falls within Top 25 or Top 26-50 on global charts based on their musical features.
 
@@ -263,7 +249,7 @@ Logistic regression reveals that energetic and danceable music tends to achieve,
 For future work, ensemble models such as Random Forest or XGBoost could be explored to address KNN’s lack of built-in feature importance. These models could potentially enhance predictive performance by capturing complex interactions
 
 
-## Smart Question 3: How do musical preferences vary across countries and regions?
+# Smart Question 3: How do musical preferences vary across countries and regions?
 
 In our analysis of Spotify data across 73 countries, delving into each country individually proved to be overwhelming due to the scale and complexity of the dataset. To streamline the process and uncover meaningful patterns, we employed k-means clustering to group countries based on their musical preferences. This approach allowed us to identify distinct clusters that reflect shared tastes in music, such as danceability, tempo preferences, loudness and valence. By analyzing these clusters instead of individual countries, we gained deeper insights into regional and cultural similarities, enabling a more concise yet comprehensive understanding of global music trends. 
 
@@ -302,14 +288,14 @@ The clusters show moderate separation, suggesting that the k-means algorithm eff
 
 4. Globally popular artists coexist with regional favorites, emphasizing both shared and unique listening habits    worldwide.
 
-## Smart Question 4: Time Series Decomposition of Song Popularity Trends
+# Smart Question 4: Time Series Decomposition of Song Popularity Trends
 
 In this analysis, we explored the temporal trends in song popularity using time series decomposition. The objective was to break down 
 the song popularity data into its core components—trend, seasonality, and residuals—to uncover the underlying patterns that influence
 a song's performance over time. The dataset used for this analysis, top_songs, contains song names and their aggregated popularity 
 metrics. This method allows us to differentiate between long-term changes, recurring patterns, and random fluctuations in popularity.
 
-#### Statistical Analysis
+## Statistical Analysis
 
 Time series decomposition was used to break down the data into the following components:
 
@@ -324,7 +310,7 @@ Multiplicative Decomposition: Assumes the observed data is a product of the comp
 Seasonal-Trend Decomposition Using Loess (STL): A flexible method that adapts to non-linear trends and irregular seasonal patterns.
 STL decomposition was selected for this analysis as it provided the most accurate and interpretable results, especially for data with non-linear trends and varying seasonality.
 
-#### The 4-panel time series decomposition revealed that
+### The 4-panel time series decomposition revealed that
 
 Observed: The top panel displays the raw data, illustrating the overall patterns and fluctuations in song popularity. 
 This includes a mix of trend, seasonality, and noise.
@@ -335,11 +321,11 @@ to weekly or monthly cycles influenced by events such as album releases or seaso
 Residual: The bottom panel displays the random fluctuations remaining after removing the trend and seasonality. These 
 irregularities capture unpredictable changes, such as sudden spikes due to viral popularity or unexpected dips.
 
-#### The three advanced statistical analyses
+## Three Advanced Statistical Analyses
 
 ANOVA, correlation analysis, and t-tests—were used to address different aspects of the relationship between song features and their popularity. Each method provides unique insights and complements the others, ensuring a comprehensive understanding of the data.
 
-#### ANOVA (Analysis of Variance)
+### ANOVA (Analysis of Variance)
 
 To compare the means of popularity across multiple groups (e.g., explicit vs. non-explicit songs or genres).
 ANOVA is ideal for assessing whether there are statistically significant differences between more than two groups.
@@ -349,7 +335,7 @@ ANOVA identifies group-level trends and can indicate whether further pairwise co
 The ANOVA revealed significant differences in average popularity across different release years (p < 0.001).
 Interpretation: Songs released more recently tend to have higher average popularity scores. This suggests that newer songs are favored in streaming trends, possibly due to recency effects or marketing emphasis on contemporary music.
 
-#### Correlation Analysis
+### Correlation Analysis
 
 To measure the strength and direction of linear relationships between numerical variables (e.g., danceability, energy, loudness, etc., and popularity).
 Correlation helps us understand how strongly two variables are related.
@@ -359,7 +345,7 @@ Correlation provides a preliminary understanding of variable relationships, help
 A weak but statistically significant negative correlation was found (ρ = -0.15, p < 0.01).
 Interpretation: As time passes, songs gradually lose popularity. While this effect is not strong, it aligns with the lifecycle of music consumption, where interest in older songs wanes over time.
 
-#### T-Test
+### T-Test
 To compare the means of two groups (e.g., songs in the Top 25 vs. songs outside the Top 25) to determine if the difference is statistically significant.
 A t-test is essential for focused pairwise comparisons after identifying significant differences with ANOVA.
 For example, it allows us to check if the average danceability of Top 25 songs differs significantly from that of lower-ranked songs.
@@ -368,14 +354,14 @@ T-tests provide detailed insights into specific feature differences, confirming 
 The t-test showed a significant difference in average popularity (p < 0.001). Global charts had a higher mean popularity score (89.13) compared to regional charts (76.24).
 Interpretation: Songs featured on global charts are more universally appealing and have broader audience reach, whereas regional charts highlight music tailored to specific cultural or local tastes.
 
-#### Clustering Popularity Trajectories
+## K-means clustering: Clustering Popularity Trajectories
 Using K-means clustering, we grouped songs based on their popularity trajectories. We identified three clusters:
 1. Songs that peak early and decline rapidly,
 2. Songs with a steady rise and fall,
 3. Songs that maintain consistent popularity over time.
 This analysis provides a deeper understanding of the lifecycle of different types of hits.
 
-#### Key Findings
+## Key Findings
 In conclusion, temporal patterns in song popularity reveal
 1. Daily fluctuations driven by external events.
 2. Lifespans of most songs in the Top 50 are short.
@@ -385,12 +371,12 @@ Understanding these patterns is crucial for artists, producers, and platforms li
 The analysis of temporal patterns highlights that song popularity is dynamic and influenced by both internal factors (e.g., song quality and marketing) and external factors (e.g., seasonal events and competition). While most songs have a short-lived popularity span, strategic planning can extend this duration and optimize the song's success in global and regional markets.
 
 
-## Conclusion
+# Conclusion
 
 This project successfully identified key drivers of song popularity on Spotify, providing actionable insights into musical and non-musical attributes. By leveraging advanced modeling techniques and robust data analysis, the study highlighted significant regional and temporal patterns, offering valuable guidance for artists, producers, and marketers. Future work could extend this analysis to incorporate additional data sources and explore emerging trends in the music industry.
 
 
-## Bibliography
+# Bibliography
 
 Asaniczka. (2024). Top Spotify Songs in 73 Countries (Daily Updated) [Data set]. Kaggle. https://doi.org/10.34740/KAGGLE/DSV/10210621
 
